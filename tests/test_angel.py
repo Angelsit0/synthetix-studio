@@ -160,5 +160,47 @@ class TestFileManagerExtra(unittest.TestCase):
             FileManager().create("   ", "")
 
 
+class TestStaticAnalyzerReglas(unittest.TestCase):
+    @staticmethod
+    def _reglas(codigo, max_linea=100, max_funcion=40):
+        archivo = CodeFile(1, "x.py", codigo)
+        return [(d.line, d.rule) for d in StaticAnalyzer(max_linea, max_funcion).analyze(archivo)]
+
+    def test_conteo_y_funcion_larga(self):
+        codigo = "x = 1\ndef larga():\n    a = 1\n\n    b = 2\n    return a + b\ny = 2\n"
+        reglas = self._reglas(codigo, max_funcion=3)
+        self.assertIn((2, "function-lines"), reglas)
+        self.assertIn((2, "function-too-long"), reglas)
+        mensaje = StaticAnalyzer(100, 3).analyze(CodeFile(1, "x.py", codigo))[0].message
+        self.assertIn("larga tiene 5 líneas", mensaje)
+
+    def test_import_todo_espacios(self):
+        codigo = "from os import *\nx = 1  # FIXME cambiar\ny = 2   \n"
+        reglas = self._reglas(codigo)
+        self.assertIn((1, "wildcard-import"), reglas)
+        self.assertIn((2, "todo-comment"), reglas)
+        self.assertIn((3, "trailing-whitespace"), reglas)
+        self.assertEqual(len(reglas), 3)
+
+    def test_anidamiento_un_aviso_por_bloque(self):
+        profundo = " " * 20
+        codigo = ("if a:\n" + profundo + "x = 1\n" + profundo + "y = 2\n"
+                  + "\n" + profundo + "z = 3\n" + "b = 1\n" + profundo + "w = 4\n")
+        lineas = [linea for linea, regla in self._reglas(codigo) if regla == "deep-nesting"]
+        self.assertEqual(lineas, [2, 7])
+
+    def test_archivo_con_errores_da_cinco_reglas(self):
+        codigo = ("from math import *\n"
+                  "def f(x):   \n"
+                  "    if x:\n"
+                  "        if x:\n"
+                  "            if x:\n"
+                  "                if x:\n"
+                  "                    return 1  # TODO\n"
+                  "    return '" + "z" * 120 + "'\n")
+        reglas = set(regla for _, regla in self._reglas(codigo, max_funcion=3))
+        self.assertGreaterEqual(len(reglas), 5)
+
+
 if __name__ == "__main__":
     unittest.main()
