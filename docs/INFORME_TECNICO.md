@@ -125,6 +125,14 @@ el nombre de la variable (`SYNTHETIX_API_KEY`) y cada persona define la clave en
 
 ## 5. Integración con la IA *(Alfredo)*
 
+### 5.0 Proveedor de IA
+El proyecto viene configurado para **Ollama** (`qwen2.5-coder:1.5b`), una IA local que corre en
+la misma máquina sin necesidad de clave ni conexión a Internet. Al ser un endpoint
+OpenAI-compatible (`http://localhost:11434/v1/chat/completions`), el mismo `AIClient` funciona
+con cualquier proveedor cloud (Groq, Gemini, OpenRouter, OpenAI) cambiando solo `api.base_url` y
+`api.model` en `config.json`. Se eligió Ollama porque los proveedores en la nube bloqueaban la
+conexión del equipo (403 por VPN/región).
+
 ### 5.1 Petición HTTP
 `HttpClient.post_json` usa solo `urllib.request` y **nunca lanza excepciones**: una respuesta
 2xx devuelve código y cuerpo; un error HTTP (`HTTPError`: 401, 429, 500...) devuelve su código y
