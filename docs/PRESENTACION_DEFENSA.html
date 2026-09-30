@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Synthetix Studio — Defensa del Proyecto</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --card: #1a1a2e;
+    --accent: #6c5ce7;
+    --accent2: #a29bfe;
+    --green: #00cec9;
+    --orange: #fdcb6e;
+    --red: #ff6b6b;
+    --text: #e8e8f0;
+    --muted: #8888a0;
+    --border: #2a2a3e;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  .slide {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    padding: 60px 80px;
+    text-align: center;
+    position: relative;
+    animation: fadeIn 0.4s ease;
+  }
+
+  .slide.active { display: flex; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  h1 {
+    font-size: 3.2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent2), var(--green));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 16px;
+    line-height: 1.2;
+  }
+
+  h2 {
+    font-size: 2.4rem;
+    font-weight: 700;
+    color: var(--accent2);
+    margin-bottom: 24px;
+    line-height: 1.3;
+  }
+
+  h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--green);
+    margin-bottom: 12px;
+  }
+
+  p, li {
+    font-size: 1.25rem;
+    line-height: 1.7;
+    color: var(--text);
+  }
+
+  .subtitle {
+    font-size: 1.5rem;
+    color: var(--muted);
+    font-weight: 300;
+    margin-bottom: 40px;
+  }
+
+  .team {
+    display: flex;
+    gap: 30px;
+    margin-top: 32px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .team-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 24px;
+    width: 280px;
+    text-align: left;
+    transition: transform 0.3s, border-color 0.3s;
+  }
+
+  .team-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent);
+  }
+
+  .team-card .name {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .team-card .role {
+    font-size: 0.95rem;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .team-card .details {
+    font-size: 0.9rem;
+    color: var(--accent2);
+    line-height: 1.5;
+  }
+
+  .content-left {
+    text-align: left;
+    max-width: 1000px;
+    width: 100%;
+  }
+
+  .content-left h2 { text-align: center; }
+
+  ul {
+    list-style: none;
+    margin-top: 16px;
+  }
+
+  ul li {
+    padding: 8px 0;
+    padding-left: 28px;
+    position: relative;
+    font-size: 1.15rem;
+  }
+
+  ul li::before {
+    content: '▸';
+    position: absolute;
+    left: 0;
+    color: var(--green);
+    font-weight: bold;
+  }
+
+  .diagram {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    margin: 20px 0;
+    font-family: 'Courier New', monospace;
+    font-size: 1.1rem;
+    line-height: 1.8;
+    text-align: center;
+    color: var(--green);
+    letter-spacing: 1px;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-top: 20px;
+    text-align: left;
+  }
+
+  .col-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+  }
+
+  .col-card h3 { margin-bottom: 12px; }
+
+  .badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin: 2px;
+  }
+
+  .badge-green { background: rgba(0,206,201,0.15); color: var(--green); }
+  .badge-orange { background: rgba(253,203,110,0.15); color: var(--orange); }
+  .badge-purple { background: rgba(108,92,231,0.15); color: var(--accent2); }
+  .badge-red { background: rgba(255,107,107,0.15); color: var(--red); }
+
+  .code-block {
+    background: #0d0d14;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    font-family: 'Courier New', monospace;
+    font-size: 1rem;
+    line-height: 1.7;
+    text-align: left;
+    margin: 16px 0;
+    color: var(--green);
+    max-width: 800px;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .highlight { color: var(--orange); }
+  .comment { color: var(--muted); }
+
+  .nav {
+    position: fixed;
+    bottom: 24px;
+    right: 32px;
+    display: flex;
+    gap: 12px;
+    z-index: 100;
+  }
+
+  .nav button {
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 1rem;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.2s;
+  }
+
+  .nav button:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .counter {
+    position: fixed;
+    bottom: 28px;
+    left: 32px;
+    font-size: 0.9rem;
+    color: var(--muted);
+    z-index: 100;
+  }
+
+  .big-emoji {
+    font-size: 4rem;
+    margin-bottom: 20px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    text-align: left;
+  }
+
+  th {
+    background: var(--card);
+    padding: 12px 16px;
+    font-weight: 600;
+    color: var(--accent2);
+    border-bottom: 2px solid var(--accent);
+  }
+
+  td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 1rem;
+  }
+
+  .flow-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin: 20px 0;
+  }
+
+  .flow-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 20px;
+    font-size: 1rem;
+    font-weight: 500;
+  }
+
+  .flow-arrow {
+    color: var(--green);
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+
+  .stats-row {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    margin: 24px 0;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px 32px;
+    text-align: center;
+  }
+
+  .stat .number {
+    font-size: 2.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent2), var(--green));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .stat .label {
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1: Título -->
+<div class="slide active" id="s1">
+  <h1>Synthetix Studio</h1>
+  <p class="subtitle">Mini IDE por línea de comandos con estructuras de datos propias e IA</p>
+  <p style="color: var(--muted); font-size: 1.1rem; margin-bottom: 32px;">
+    Proyecto 1 — Algoritmos y Estructuras II — Universidad José Antonio Páez<br>
+    Septiembre 2026
+  </p>
+  <div class="team">
+    <div class="team-card">
+      <div class="name">Angel Torres</div>
+      <div class="role">Archivos, Config, Análisis</div>
+      <div class="details">LinkedList · FileManager<br>StaticAnalyzer · Config</div>
+    </div>
+    <div class="team-card">
+      <div class="name">Luis Orellana</div>
+      <div class="role">Validación, Historial, Ordenamiento</div>
+      <div class="details">Stack · SyntaxChecker<br>History · MergeSort · ShellSort</div>
+    </div>
+    <div class="team-card">
+      <div class="name">Alfredo Aureliano</div>
+      <div class="role">Cola de peticiones, IA</div>
+      <div class="details">Queue · HttpClient<br>AIClient · RequestBuffer</div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 2: Qué es -->
+<div class="slide" id="s2">
+  <div class="big-emoji">💻</div>
+  <h2>¿Qué es Synthetix Studio?</h2>
+  <p style="max-width: 800px; font-size: 1.3rem; margin-bottom: 32px;">
+    Un <strong>editor de código en la terminal</strong> que crea, edita, valida y analiza archivos usando comandos de texto.
+  </p>
+  <div class="flow-row">
+    <div class="flow-box"><span class="badge badge-green">Crear</span> archivos</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box"><span class="badge badge-orange">Editar</span> código</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box"><span class="badge badge-purple">Validar</span> sintaxis</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box"><span class="badge badge-red">Analizar</span> con IA</div>
+  </div>
+  <div class="content-left" style="margin-top: 24px;">
+    <ul>
+      <li>Sin librerías externas — solo Python estándar</li>
+      <li>Estructuras de datos <strong>propias</strong> con nodos (lista, pila, cola)</li>
+      <li>Algoritmos de ordenamiento escritos a mano (MergeSort, ShellSort)</li>
+      <li>IA local con Ollama — no necesita internet</li>
+    </ul>
+  </div>
+</div>
+
+<!-- SLIDE 3: Arquitectura -->
+<div class="slide" id="s3">
+  <h2>Arquitectura del Proyecto</h2>
+  <p style="color: var(--muted); margin-bottom: 20px;">Patrón Command: cada acción es un objeto independiente</p>
+  <div class="flow-row">
+    <div class="flow-box" style="border-color: var(--accent);">Usuario<br><small>escribe un comando</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="border-color: var(--green);">Console<br><small>(Invoker)</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="border-color: var(--orange);">CommandRegistry<br><small>busca el comando</small></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="border-color: var(--red);">Command.execute()<br><small>hace el trabajo</small></div>
+  </div>
+  <div class="two-col" style="max-width: 900px; margin-top: 30px;">
+    <div class="col-card">
+      <h3>4 patrones de diseño</h3>
+      <ul>
+        <li><strong>Command</strong> — consola → registro → comando</li>
+        <li><strong>Memento</strong> — undo/redo con dos pilas</li>
+        <li><strong>Strategy</strong> — MergeSort o ShellSort</li>
+        <li><strong>Productor-Consumidor</strong> — cola de IA</li>
+      </ul>
+    </div>
+    <div class="col-card">
+      <h3>Ventaja principal</h3>
+      <p style="font-size: 1.05rem;">Agregar un comando nuevo = crear una clase y registrarla.<br><br>
+      <strong>No se toca</strong> la consola, ni app.py, ni los demás comandos. Cada integrante trabajó en su propio archivo.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 4: Angel - LinkedList -->
+<div class="slide" id="s4">
+  <h2>🔗 Lista Doblemente Enlazada</h2>
+  <p style="color: var(--muted); margin-bottom: 12px;">Angel Torres — Estructura base de los archivos</p>
+  <div class="diagram">[HEAD] ←→ [main.py] ←→ [util.py] ←→ [app.py] ←→ [TAIL]
+  prev ↔ next      prev ↔ next      prev ↔ next</div>
+  <div class="two-col" style="max-width: 900px;">
+    <div class="col-card">
+      <h3>¿Por qué doble?</h3>
+      <ul>
+        <li>Al borrar un nodo del medio, se reconectan los vecinos directamente</li>
+        <li>Con lista simple habría que recorrer todo para encontrar al anterior</li>
+        <li>Insertar al final es O(1) gracias a _tail</li>
+      </ul>
+    </div>
+    <div class="col-card">
+      <h3>Complejidades</h3>
+      <table>
+        <tr><td>push_back</td><td><span class="badge badge-green">O(1)</span></td></tr>
+        <tr><td>remove_at, at</td><td><span class="badge badge-orange">O(n)</span></td></tr>
+        <tr><td>__len__, is_empty</td><td><span class="badge badge-green">O(1)</span></td></tr>
+        <tr><td>clear, __iter__</td><td><span class="badge badge-orange">O(n)</span></td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 5: Angel - StaticAnalyzer -->
+<div class="slide" id="s5">
+  <h2>🔍 Análisis Estático</h2>
+  <p style="color: var(--muted); margin-bottom: 16px;">Angel Torres — Encuentra problemas sin ejecutar el código</p>
+  <div class="content-left" style="max-width: 900px;">
+    <table>
+      <tr><th>Gravedad</th><th>Regla</th><th>Qué detecta</th></tr>
+      <tr><td><span class="badge badge-red">ERROR</span></td><td>unbalanced-delimiters</td><td>Paréntesis sin cerrar</td></tr>
+      <tr><td><span class="badge badge-orange">WARNING</span></td><td>function-too-long</td><td>Función con más de 40 líneas</td></tr>
+      <tr><td><span class="badge badge-orange">WARNING</span></td><td>wildcard-import</td><td>from modulo import *</td></tr>
+      <tr><td><span class="badge badge-orange">WARNING</span></td><td>deep-nesting</td><td>Más de 4 niveles de indentación</td></tr>
+      <tr><td><span class="badge badge-purple">INFO</span></td><td>function-lines</td><td>Conteo de líneas por función</td></tr>
+      <tr><td><span class="badge badge-purple">INFO</span></td><td>todo-comment</td><td>Comentarios con TODO/FIXME</td></tr>
+      <tr><td><span class="badge badge-purple">INFO</span></td><td>trailing-whitespace</td><td>Espacios al final de línea</td></tr>
+    </table>
+    <p style="margin-top: 16px; color: var(--muted);">
+      Comando <code style="color: var(--green);">lint</code> → recorre el archivo una sola vez → devuelve diagnósticos sin ordenar.
+      Los ordena el <code style="color: var(--green);">sort</code> de Luis.
+    </p>
+  </div>
+</div>
+
+<!-- SLIDE 6: Luis - Stack y SyntaxChecker -->
+<div class="slide" id="s6">
+  <h2>📚 Pila y Validación de Sintaxis</h2>
+  <p style="color: var(--muted); margin-bottom: 12px;">Luis Orellana — LIFO: último en entrar, primero en salir</p>
+  <div class="two-col" style="max-width: 950px;">
+    <div class="col-card">
+      <h3>Stack (Pila)</h3>
+      <div class="diagram" style="font-size: 1rem;">     [  )  ] ← tope
+     [  {  ]
+     [  (  ]</div>
+      <ul>
+        <li>push, pop, peek → <span class="badge badge-green">O(1)</span></li>
+        <li>Hecha con nodos enlazados</li>
+        <li>pop y peek lanzan IndexError si está vacía</li>
+      </ul>
+    </div>
+    <div class="col-card">
+      <h3>SyntaxChecker</h3>
+      <ul>
+        <li>Recorre el código carácter por carácter</li>
+        <li>Apertura (<code>(</code>, <code>{</code>, <code>[</code>) → apilar con línea y columna</li>
+        <li>Cierre (<code>)</code>, <code>}</code>, <code>]</code>) → sacar tope y comparar</li>
+        <li>¿No coinciden? → error con posición exacta</li>
+        <li>¿Pila no vacía al final? → apertura sin cerrar</li>
+        <li>Ignora strings y comentarios</li>
+      </ul>
+      <p style="margin-top: 8px;"><span class="badge badge-green">O(n)</span> una sola pasada</p>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 7: Luis - Undo/Redo -->
+<div class="slide" id="s7">
+  <h2>↩️ Undo / Redo — Patrón Memento</h2>
+  <p style="color: var(--muted); margin-bottom: 16px;">Luis Orellana — Dos pilas para viajar en el tiempo</p>
+  <div class="diagram" style="max-width: 700px; margin: 0 auto;">UNDO:  [estado1] → [estado2] → [estado3]  ← tope
+REDO:  [vacía]
+
+Al hacer UNDO:  estado actual → pila Redo
+                tope de Undo → estado actual
+
+Al hacer REDO:  estado actual → pila Undo
+                tope de Redo → estado actual
+
+Al editar:      estado anterior → pila Undo
+                pila Redo → SE VACÍA</div>
+  <p style="margin-top: 20px; font-size: 1.15rem;">
+    <strong>¿Por qué una edición nueva vacía Redo?</strong><br>
+    Porque si deshiciste 3 cambios y luego haces algo nuevo, la "línea temporal" cambió — ya no tiene sentido rehacer los cambios viejos.
+  </p>
+</div>
+
+<!-- SLIDE 8: Luis - Sorting -->
+<div class="slide" id="s8">
+  <h2>📊 MergeSort vs ShellSort</h2>
+  <p style="color: var(--muted); margin-bottom: 20px;">Luis Orellana — Patrón Strategy: se elige en tiempo de ejecución</p>
+  <div class="two-col" style="max-width: 900px;">
+    <div class="col-card">
+      <h3>MergeSort</h3>
+      <p style="margin-bottom: 12px;">Divide → ordena cada mitad → mezcla</p>
+      <table>
+        <tr><td>Tiempo</td><td><span class="badge badge-green">O(n log n)</span> siempre</td></tr>
+        <tr><td>Memoria</td><td><span class="badge badge-orange">O(n)</span> extra</td></tr>
+        <tr><td>Estable</td><td><span class="badge badge-green">Sí</span></td></tr>
+      </table>
+      <p style="margin-top: 10px; font-size: 0.95rem; color: var(--muted);">Mantiene el orden original de elementos iguales. Ideal cuando importa el orden secundario.</p>
+    </div>
+    <div class="col-card">
+      <h3>ShellSort</h3>
+      <p style="margin-bottom: 12px;">Inserción mejorada con gaps de Knuth (1, 4, 13, 40...)</p>
+      <table>
+        <tr><td>Tiempo</td><td><span class="badge badge-orange">O(n^1.5)</span> peor</td></tr>
+        <tr><td>Memoria</td><td><span class="badge badge-green">O(1)</span> in-place</td></tr>
+        <tr><td>Estable</td><td><span class="badge badge-red">No</span></td></tr>
+      </table>
+      <p style="margin-top: 10px; font-size: 0.95rem; color: var(--muted);">Ordena sin crear listas temporales. Compara elementos lejanos y los va acercando.</p>
+    </div>
+  </div>
+  <p style="margin-top: 20px; font-size: 1.1rem;">
+    <code style="color: var(--green);">sort line mergesort</code> · <code style="color: var(--green);">sort severity shellsort desc</code>
+  </p>
+</div>
+
+<!-- SLIDE 9: Alfredo - Queue -->
+<div class="slide" id="s9">
+  <h2>🏦 Cola FIFO</h2>
+  <p style="color: var(--muted); margin-bottom: 12px;">Alfredo Aureliano — Primero en llegar, primero en ser atendido</p>
+  <div class="diagram">FRENTE → [solicitud #1] → [solicitud #2] → [solicitud #3] ← FONDO
+           (la próxima       (espera)          (la última
+            en atenderse)                       que llegó)</div>
+  <div class="content-left" style="max-width: 800px; margin-top: 16px;">
+    <table>
+      <tr><th>Operación</th><th>Qué hace</th><th>Complejidad</th></tr>
+      <tr><td><code>enqueue</code></td><td>Ponerse en la fila (al fondo)</td><td><span class="badge badge-green">O(1)</span></td></tr>
+      <tr><td><code>dequeue</code></td><td>Atender al primero (sale del frente)</td><td><span class="badge badge-green">O(1)</span></td></tr>
+      <tr><td><code>front</code></td><td>Ver quién sigue sin sacarlo</td><td><span class="badge badge-green">O(1)</span></td></tr>
+    </table>
+    <p style="margin-top: 12px;">Hecha con <strong>nodos enlazados</strong>, con punteros <code>_front</code> y <code>_back</code>. Sin usar <code>list</code>, <code>deque</code> ni el módulo <code>queue</code> de Python.</p>
+  </div>
+</div>
+
+<!-- SLIDE 10: Alfredo - Productor-Consumidor -->
+<div class="slide" id="s10">
+  <h2>⚡ Productor — Consumidor</h2>
+  <p style="color: var(--muted); margin-bottom: 20px;">Alfredo Aureliano — La consola no espera a la IA</p>
+  <div class="flow-row" style="margin-bottom: 20px;">
+    <div class="flow-box" style="border-color: var(--orange);">
+      <strong>PRODUCTOR</strong><br>
+      <small>La consola (tú)</small><br>
+      <code>analyze</code> → encola<br>
+      <small>devuelve el control al instante</small>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="border-color: var(--green); padding: 14px 24px;">
+      <strong>COLA FIFO</strong><br>
+      <small>protegida por Lock</small><br>
+      #1 → #2 → #3
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="border-color: var(--accent);">
+      <strong>CONSUMIDOR</strong><br>
+      <small>UN solo hilo</small><br>
+      despacha de a uno<br>
+      <small>suelta el lock durante la IA</small>
+    </div>
+  </div>
+  <div class="two-col" style="max-width: 900px;">
+    <div class="col-card">
+      <h3>¿Por qué un solo hilo?</h3>
+      <p style="font-size: 1.05rem;">Si mandamos muchas peticiones a la vez, la IA nos bloquea (error 429). Con un solo hilo, salen de a una, en orden FIFO.</p>
+    </div>
+    <div class="col-card">
+      <h3>¿Por qué se suelta el lock?</h3>
+      <p style="font-size: 1.05rem;">La IA tarda segundos. Si el hilo mantuviera el lock, <code>queue-status</code> y <code>analyze</code> quedarían congelados. El lock solo protege los datos, nunca la red.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 11: IA Local -->
+<div class="slide" id="s11">
+  <h2>🤖 IA Local con Ollama</h2>
+  <p style="color: var(--muted); margin-bottom: 20px;">Sin internet, sin cuenta, sin costo</p>
+  <div class="flow-row" style="margin-bottom: 24px;">
+    <div class="flow-box">Synthetix Studio</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="border-color: var(--green);">localhost:11434</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">Ollama<br><small>qwen2.5-coder:1.5b</small></div>
+  </div>
+  <div class="content-left" style="max-width: 800px;">
+    <ul>
+      <li>El modelo corre en tu propia computadora</li>
+      <li>Formato <strong>OpenAI-compatible</strong> → el mismo código funciona con Groq, Gemini o OpenAI</li>
+      <li>Cambiar de proveedor = editar 2 campos en <code>config.json</code></li>
+      <li>La clave de la IA va en una <strong>variable de entorno</strong>, nunca en el código</li>
+    </ul>
+    <p style="margin-top: 16px; padding: 16px; background: var(--card); border-radius: 12px; border-left: 4px solid var(--orange);">
+      <strong>¿Por qué no en config.json?</strong> Porque se sube a GitHub. Si la clave estuviera ahí, quedaría pública en todo el historial de Git, aunque luego la borres.
+    </p>
+  </div>
+</div>
+
+<!-- SLIDE 12: Números -->
+<div class="slide" id="s12">
+  <h2>📈 El proyecto en números</h2>
+  <div class="stats-row">
+    <div class="stat"><div class="number">45</div><div class="label">pruebas unitarias</div></div>
+    <div class="stat"><div class="number">3</div><div class="label">estructuras propias</div></div>
+    <div class="stat"><div class="number">2</div><div class="label">algoritmos de ordenamiento</div></div>
+    <div class="stat"><div class="number">4</div><div class="label">patrones de diseño</div></div>
+    <div class="stat"><div class="number">15</div><div class="label">comandos</div></div>
+    <div class="stat"><div class="number">0</div><div class="label">librerías externas</div></div>
+  </div>
+  <div class="flow-row" style="margin-top: 24px;">
+    <div class="flow-box"><span class="badge badge-green">LinkedList</span> Angel</div>
+    <div class="flow-box"><span class="badge badge-purple">Stack</span> Luis</div>
+    <div class="flow-box"><span class="badge badge-orange">Queue</span> Alfredo</div>
+  </div>
+  <p style="margin-top: 24px; font-size: 1.2rem; color: var(--green);">
+    <code>python scripts/verificar.py --estricto</code> → <strong>TODO LISTO</strong>
+  </p>
+</div>
+
+<!-- SLIDE 13: Demo en vivo -->
+<div class="slide" id="s13">
+  <div class="big-emoji">🎬</div>
+  <h2>Demo en vivo</h2>
+  <div class="code-block" style="max-width: 700px; margin: 0 auto;">python main.py config.json
+
+<span class="highlight">new</span> main.py                    <span class="comment"># crear archivo</span>
+<span class="highlight">write</span> → código → .             <span class="comment"># escribir código</span>
+<span class="highlight">check</span>                          <span class="comment"># validar paréntesis ✓</span>
+<span class="highlight">insert</span> 5 "roto = (a + b"       <span class="comment"># romper un paréntesis</span>
+<span class="highlight">check</span>                          <span class="comment"># ahora marca el error ✗</span>
+<span class="highlight">undo</span> / <span class="highlight">redo</span>                    <span class="comment"># dos pilas en acción</span>
+<span class="highlight">lint</span>                           <span class="comment"># análisis estático</span>
+<span class="highlight">sort</span> line mergesort            <span class="comment"># ordenar diagnósticos</span>
+<span class="highlight">sort</span> severity shellsort desc   <span class="comment"># otro algoritmo</span>
+<span class="highlight">analyze</span> × 3                    <span class="comment"># encolar 3 análisis</span>
+<span class="highlight">queue-status</span>                   <span class="comment"># ver la cola FIFO</span>
+<span class="highlight">results</span>                        <span class="comment"># Big O de la IA</span>
+<span class="highlight">exit</span>                           <span class="comment"># cierre limpio</span></div>
+</div>
+
+<!-- SLIDE 14: Final -->
+<div class="slide" id="s14">
+  <h1>¿Preguntas?</h1>
+  <p class="subtitle">Synthetix Studio — v1.0</p>
+  <div class="team" style="margin-top: 20px;">
+    <div class="team-card">
+      <div class="name">Angel Torres</div>
+      <div class="details">Lista enlazada · FileManager<br>StaticAnalyzer · Config · Command</div>
+    </div>
+    <div class="team-card">
+      <div class="name">Luis Orellana</div>
+      <div class="details">Stack · SyntaxChecker<br>History · MergeSort · ShellSort</div>
+    </div>
+    <div class="team-card">
+      <div class="name">Alfredo Aureliano</div>
+      <div class="details">Queue · HttpClient<br>AIClient · RequestBuffer</div>
+    </div>
+  </div>
+  <p style="margin-top: 40px; color: var(--muted); font-size: 1rem;">
+    github.com/Angelsit0/synthetix-studio
+  </p>
+</div>
+
+<!-- Navigation -->
+<div class="counter"><span id="current">1</span> / <span id="total">14</span></div>
+<div class="nav">
+  <button onclick="prev()">← Anterior</button>
+  <button onclick="next()">Siguiente →</button>
+</div>
+
+<script>
+  let current = 0;
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  document.getElementById('total').textContent = total;
+
+  function show(n) {
+    slides[current].classList.remove('active');
+    current = (n + total) % total;
+    slides[current].classList.add('active');
+    slides[current].style.animation = 'none';
+    slides[current].offsetHeight;
+    slides[current].style.animation = '';
+    document.getElementById('current').textContent = current + 1;
+  }
+
+  function next() { show(current + 1); }
+  function prev() { show(current - 1); }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); prev(); }
+    if (e.key === 'Home') { e.preventDefault(); show(0); }
+    if (e.key === 'End') { e.preventDefault(); show(total - 1); }
+  });
+</script>
+</body>
+</html>
