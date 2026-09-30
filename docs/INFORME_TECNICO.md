@@ -5,8 +5,21 @@
 
 ## 1. Arquitectura general
 - Diagrama de clases: ver README (sección Arquitectura).
-- Patrón **Command** *(Angel)*: Invoker (`Console`), registro (`CommandRegistry`), comando
-  (`Command` y subclases) y receptores. Por qué facilita agregar comandos sin tocar la consola.
+- Patrón **Command** *(Angel)*: cada acción de la consola es un objeto con la misma interfaz.
+  - **Command** (clase abstracta en `core/command.py`): define `name`, `usage`, `description`,
+    `min_args` y el método abstracto `execute(args, ctx)`. Cada comando (`NewCommand`,
+    `CheckCommand`, `SortCommand`, `AnalyzeCommand`...) es una subclase.
+  - **Invoker** (`Console`): lee la línea, la separa en `CommandArgs`, busca el comando en el
+    registro, valida la cantidad de argumentos y llama `execute()`. No sabe qué hace cada comando,
+    y atrapa cualquier excepción para mostrarla como `[error] ...` y registrarla en el log: la
+    consola nunca se cae.
+  - **Registro** (`CommandRegistry`): guarda los comandos y rechaza nombres duplicados. Cada
+    módulo registra los suyos con `<Modulo>CommandModule.register_into(registry)`.
+  - **Receptores** (en `AppContext`): `FileManager`, `CodeFile`, `Config`, `StaticAnalyzer`,
+    `SyntaxChecker`, `SortStrategy`, `RequestBuffer`. Son los objetos que hacen el trabajo real.
+  - **Ventaja**: agregar un comando es crear una subclase y registrarla; no se toca `Console` ni
+    `app.py` (principio abierto/cerrado). Además, cada integrante trabajó sus comandos en su
+    propio archivo sin pisar a los demás.
 - Patrón **Strategy** en el motor de ordenamiento *(Luis)*.
 - Patrón **Memento** en Undo/Redo *(Luis)*.
 - **Productor–consumidor** en el buffer de peticiones *(Alfredo)*.
@@ -15,8 +28,12 @@
 
 | Estructura | Operación | Complejidad | Justificación |
 |---|---|---|---|
-| `LinkedList` (Angel) | `push_back` | O(1) (*) | referencia `_tail` |
-| `LinkedList` (Angel) | `remove_at`, `at`, `index_of` | O(n) (*) | recorrido desde `_head` |
+| `LinkedList` (Angel) | `push_back` | O(1) | se engancha detrás de `_tail`, sin recorrer |
+| `LinkedList` (Angel) | `remove_at`, `at` | O(n) | buscar el nodo recorre desde `_head` o desde `_tail` (la mitad más cercana: n/2 pasos como máximo); el re-enlace en sí es O(1) |
+| `LinkedList` (Angel) | `index_of`, `__iter__`, `clear` | O(n) | visitan cada nodo una vez; `clear` desenlaza (`prev`/`next` = None) cada uno |
+| `LinkedList` (Angel) | `__len__`, `is_empty` | O(1) | contador `_size` |
+| `FileManager` (Angel) | `create` | O(n) | recorre para rechazar nombres repetidos; la inserción es O(1) |
+| `FileManager` (Angel) | `find`, `switch_to`, `remove` | O(n) | búsqueda por id o nombre con `index_of`; `remove` además usa `remove_at` |
 | `Stack` (Luis) | `push`, `pop`, `peek` | O(1) (*) | se opera solo en el tope |
 | `Queue` (Alfredo) | `enqueue`, `dequeue` | O(1) (*) | referencias `_front` y `_back` |
 
@@ -28,12 +45,58 @@
 | Undo / Redo | O(L) por copiar el texto de tamaño L (*) | O(k·L) para k cambios | — | Luis |
 | MergeSort | O(n log n) en todos los casos (*) | O(n) | Sí | Luis |
 | ShellSort (Knuth) | O(n^1.5) peor caso (*) | O(1) | No | Luis |
-| `StaticAnalyzer.analyze` | O(total de caracteres) (*) | O(d) diagnósticos | — | Angel |
+| `StaticAnalyzer.analyze` | O(C), C = total de caracteres; O(p·C) con funciones anidadas a profundidad p | O(d) diagnósticos | — | Angel |
 
 Comparar MergeSort vs ShellSort con mediciones reales (`sort` imprime los microsegundos) *(Luis)*.
 
+### 3.1 Lista de archivos *(Angel)*
+`FileManager` guarda los archivos abiertos en la `LinkedList` propia (doblemente enlazada).
+Se eligió doble y no simple porque cada nodo conoce a su anterior: al eliminar se re-enlazan
+los vecinos directamente, y con `_tail` se inserta al final en O(1). Al eliminar se cubren
+cuatro casos (único, primero, último y medio) actualizando `_head`/`_tail` cuando corresponde,
+y el nodo se "libera" poniendo `prev`, `next` y `value` en `None`: sin referencias, el
+recolector de basura de Python lo elimina. Si se borra el archivo activo, el nuevo activo es el
+siguiente, si no el anterior, o ninguno si la lista queda vacía; se calcula **antes** de borrar.
+
+### 3.2 Análisis estático *(Angel)*
+`StaticAnalyzer.analyze` recorre el archivo una sola vez y devuelve los diagnósticos en orden de
+aparición, **sin ordenar**: ordenarlos es trabajo de `sort` (MergeSort / ShellSort).
+
+| Gravedad | Regla | Qué detecta |
+|---|---|---|
+| ERROR | `unbalanced-delimiters` | desbalance de `()`, `{}`, `[]` (reutiliza `SyntaxChecker`) |
+| WARNING | `function-too-long` | función con más de `editor.max_function_lines` líneas |
+| WARNING | `line-too-long` | línea con más de `editor.max_line_length` caracteres |
+| WARNING | `wildcard-import` | `from modulo import *` |
+| WARNING | `deep-nesting` | más de 4 niveles de indentación; un solo aviso por bloque |
+| INFO | `function-lines` | conteo de líneas de cada función |
+| INFO | `todo-comment` | comentarios con TODO o FIXME |
+| INFO | `trailing-whitespace` | espacios o tabs al final de la línea |
+
+El largo de una función va desde su `def` hasta la última línea no vacía con más indentación
+que el `def`. Medirlo recorre el cuerpo de la función; con funciones anidadas ese cuerpo se
+vuelve a recorrer por cada nivel, por eso el peor caso es O(p·C). Limitación conocida:
+`todo-comment` toma el primer `#` de la línea, aunque esté dentro de una cadena.
+
 ## 4. Configuración externa *(Angel)*
-Formato de `config.json`, claves usadas, por qué la API key va en variable de entorno.
+Al iniciar, `Application` lee **obligatoriamente** el archivo indicado (`python main.py
+config.json`); si no existe o el JSON es inválido, el programa termina con un mensaje claro.
+El comando `config <ruta>` permite cargar otro durante la sesión; si falla, `Config` conserva la
+configuración anterior. Las claves se consultan con puntos (`config.get("api.base_url")`).
+
+| Clave | Uso |
+|---|---|
+| `paths.backups` | carpeta de respaldos automáticos (`save`, `delete` de un archivo modificado, `exit`) |
+| `paths.logs` | carpeta del log de errores (`synthetix.log`) |
+| `api.base_url` + `api.endpoint` | URL de la IA (formato OpenAI-compatible) |
+| `api.model`, `api.timeout_seconds`, `api.max_tokens` | parámetros de conexión |
+| `api.api_key_env` | **nombre** de la variable de entorno que tiene la clave |
+| `editor.max_line_length`, `editor.max_function_lines` | límites del análisis estático |
+
+**Por qué la API key va en una variable de entorno:** `config.json` se sube al repositorio, que
+comparten los integrantes y el profesor; una clave escrita ahí quedaría pública en el historial
+de Git aunque luego se borre, y cualquiera podría gastar la cuota. Por eso el archivo solo guarda
+el nombre de la variable (`SYNTHETIX_API_KEY`) y cada persona define la clave en su propia PC.
 
 ## 5. Integración con la IA *(Alfredo)*
 Endpoint, formato de la petición, cómo se extrae Big O y refactorización, manejo de errores.
