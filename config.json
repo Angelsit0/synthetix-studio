@@ -8,13 +8,13 @@
     "logs": "./logs"
   },
   "api": {
-    "provider": "gemini-openai-compatible",
-    "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+    "provider": "ollama-local",
+    "base_url": "http://localhost:11434/v1",
     "endpoint": "/chat/completions",
-    "model": "gemini-3.8-flash",
+    "model": "qwen2.5-coder:1.5b",
     "api_key_env": "SYNTHETIX_API_KEY",
-    "timeout_seconds": 30,
-    "max_tokens": 1024
+    "timeout_seconds": 120,
+    "max_tokens": 512
   },
   "editor": {
     "max_line_length": 100,
