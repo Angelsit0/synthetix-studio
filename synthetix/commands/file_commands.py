@@ -39,13 +39,13 @@ class ListCommand(Command):
             print("No hay archivos abiertos. Usa 'new <nombre>'.")
             return
         active = ctx.files.active
-        print(f"Archivos abiertos ({ctx.files.count()}):")
+        print(f"\033[96mArchivos abiertos ({ctx.files.count()}):\033[0m")
         for position, file in enumerate(ctx.files, start=1):
-            marca = "  * " if file is active else "    "
-            estado = ", sin respaldar" if file.modified else ""
-            activo = "  (activo)" if file is active else ""
-            print(f"{marca}{position}. [id {file.id}] {file.name}  - "
-                  f"{file.line_count()} líneas{estado}{activo}")
+            marca = "\033[92m  * \033[0m" if file is active else "    "
+            estado = "\033[93m, sin respaldar\033[0m" if file.modified else ""
+            activo = "\033[92m  (activo)\033[0m" if file is active else ""
+            print(f"{marca}{position}. [\033[90mid {file.id}\033[0m] \033[97m{file.name}\033[0m  - "
+                  f"\033[94m{file.line_count()} líneas\033[0m{estado}{activo}")
 
 
 class SwitchCommand(Command):
@@ -86,9 +86,9 @@ class ShowCommand(Command):
     def execute(self, args, ctx) -> None:
         file = CommandUtils.active_file(ctx)
         lines = file.lines()
-        print(f"--- {file.name} ({len(lines)} líneas) ---")
+        print(f"\033[96m--- {file.name} ({len(lines)} líneas) ---\033[0m")
         for number, text in enumerate(lines, start=1):
-            print(f"{number:>4} | {text}")
+            print(f"\033[92m{number:>4} |\033[0m \033[97m{text}\033[0m")
 
 
 class WriteCommand(Command):

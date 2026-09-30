@@ -98,22 +98,23 @@ class RequestBuffer:
         """Texto para queue-status: en proceso, pendientes en orden FIFO y completadas sin ver.
         O(p + c), con p = pendientes y c = completadas."""
         with self._condition:
-            lines = ["Cola de peticiones a la IA (FIFO, un solo hilo despacha de una en una):"]
+            lines = ["\033[96mCola de peticiones a la IA (FIFO, un solo hilo despacha de una en una):\033[0m"]
             if self._processing is None:
-                lines.append("  En proceso: ninguna")
+                lines.append("  En proceso: \033[90mninguna\033[0m")
             else:
-                lines.append(f"  En proceso: {self._describe(self._processing)}")
+                lines.append(f"  En proceso: \033[93m{self._describe(self._processing)}\033[0m")
             if self._pending.is_empty():
-                lines.append("  Pendientes: ninguna")
+                lines.append("  Pendientes: \033[90mninguna\033[0m")
             else:
-                lines.append(f"  Pendientes ({len(self._pending)}), en orden de salida:")
+                lines.append(f"  Pendientes (\033[93m{len(self._pending)}\033[0m), en orden de salida:")
                 position = 1
                 for request in self._pending:
-                    lines.append(f"    {position}. {self._describe(request)}")
+                    lines.append(f"    {position}. \033[97m{self._describe(request)}\033[0m")
                     position += 1
             unseen = self._count_unseen()
-            hint = "  (usa 'results')" if unseen else ""
-            lines.append(f"  Respuestas sin ver: {unseen}{hint}")
+            hint = "\033[90m  (usa 'results')\033[0m" if unseen else ""
+            color = "\033[92m" if unseen else "\033[90m"
+            lines.append(f"  Respuestas sin ver: {color}{unseen}\033[0m{hint}")
         return "\n".join(lines)
 
     def results_report(self) -> str:
@@ -183,12 +184,12 @@ class RequestBuffer:
     def _format_result(done: CompletedRequest) -> str:
         """Bloque de texto de una respuesta. Los errores se muestran como 'Error:' y no
         como '[error]', que es la marca de fallo de un comando en la consola."""
-        header = f"=== Solicitud #{done.id}: {done.file_name} ==="
+        header = f"\033[96m=== Solicitud #{done.id}: {done.file_name} ===\033[0m"
         result = done.result
         if not result.ok:
-            return f"{header}\nError: {result.error}"
-        return (f"{header}\nCOMPLEJIDAD:\n{RequestBuffer._indent(result.complexity)}"
-                f"\nREFACTORIZACION:\n{RequestBuffer._indent(result.refactoring)}")
+            return f"{header}\n\033[91mError: {result.error}\033[0m"
+        return (f"{header}\n\033[93mCOMPLEJIDAD:\033[0m\n{RequestBuffer._indent(result.complexity)}"
+                f"\n\033[92mREFACTORIZACION:\033[0m\n{RequestBuffer._indent(result.refactoring)}")
 
     @staticmethod
     def _indent(text: str) -> str:
