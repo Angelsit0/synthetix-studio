@@ -10,6 +10,10 @@ import tempfile
 import threading
 import time
 import unittest
+import re
+
+def strip_ansi(text: str) -> str:
+    return re.sub(r'\033\[[0-9;]*m', '', text)
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -190,7 +194,7 @@ class TestRequestBufferExtra(unittest.TestCase):
             for nombre in ("a.py", "b.py", "c.py"):
                 buffer.submit(nombre, "x = 1")
             self.assertTrue(ia.empezo.wait(5))
-            estado = buffer.status_report()
+            estado = strip_ansi(buffer.status_report())
             self.assertIn("En proceso: #1 a.py", estado)
             self.assertIn("1. #2 b.py", estado)
             self.assertIn("2. #3 c.py", estado)
@@ -216,11 +220,11 @@ class TestRequestBufferExtra(unittest.TestCase):
             buffer.submit("malo.py", "x = 1")
             buffer.submit("bueno.py", "x = 1")
             limite = time.time() + 5
-            while "Respuestas sin ver: 2" not in buffer.status_report() and time.time() < limite:
+            while "Respuestas sin ver: 2" not in strip_ansi(buffer.status_report()) and time.time() < limite:
                 time.sleep(0.02)
         finally:
             buffer.stop()
-        reporte = buffer.results_report()
+        reporte = strip_ansi(buffer.results_report())
         self.assertIn("Error: fallo inesperado: explotó", reporte)
         self.assertIn("COMPLEJIDAD:\n  O(n)", reporte)
         self.assertNotIn("[error]", reporte)

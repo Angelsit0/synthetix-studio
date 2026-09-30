@@ -57,7 +57,10 @@ class Application:
 
     @staticmethod
     def _configure_output() -> None:
-        """Evita errores con tildes en la consola de Windows."""
+        """Evita errores con tildes en la consola de Windows y habilita ANSI."""
+        import os
+        if os.name == "nt":
+            os.system("")  # Habilita secuencias ANSI en la consola de Windows
         for stream in (sys.stdout, sys.stderr):
             if hasattr(stream, "reconfigure"):
                 stream.reconfigure(encoding="utf-8")

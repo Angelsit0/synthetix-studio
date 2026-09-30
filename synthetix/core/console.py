@@ -15,7 +15,38 @@ class Console:
         self._ctx = ctx
 
     def run(self) -> None:
-        print("Synthetix Studio - Mini IDE por consola. Escribe 'help' para ver los comandos.")
+        import time
+        import sys
+        
+        frames = [
+            r"""
+    /\_/\  
+   ( -.- )  zZz...
+    > ^ <   
+""",
+            r"""
+    /\_/\  
+   ( o.o )  ?
+    > ^ <   
+""",
+            r"""
+    /\_/\  
+   ( ^.^ ) 🍌 Synthetix Studio
+    > ^ <     Mini IDE
+"""
+        ]
+        print("\n" * 3)
+        for i, frame in enumerate(frames):
+            lines = frame.strip('\n').split('\n')
+            if i > 0:
+                sys.stdout.write(f"\033[{len(lines)}A")
+            for line in lines:
+                sys.stdout.write(f"\033[38;5;213m{line}\033[K\033[0m\n")
+            sys.stdout.flush()
+            if i < len(frames) - 1:
+                time.sleep(0.5)
+                
+        print("\033[90m  Escribe 'help' para ver los comandos.\033[0m\n")
         while self._ctx.running:
             try:
                 line = input(self._prompt())
@@ -42,9 +73,11 @@ class Console:
         try:
             command.execute(args, self._ctx)
         except Exception as e:  # noqa: BLE001 - la consola no debe caerse nunca
-            print(f"[error] {e}")
+            print(f"\033[91m[error]\033[0m {e}")
             self._ctx.logger.error(f"{args.name}: {e}")
 
     def _prompt(self) -> str:
         active = self._ctx.files.active
-        return f"synthetix({active.name})> " if active else "synthetix> "
+        if active:
+            return f"\033[92msynthetix\033[0m(\033[96m{active.name}\033[0m)> "
+        return "\033[92msynthetix\033[0m> "
