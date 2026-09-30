@@ -31,7 +31,35 @@ class MergeSort(SortStrategy):
     name = "mergesort"
 
     def sort(self, items: list, before: Comparator) -> None:
-        raise NotImplementedError("[sin implementar] MergeSort.sort")
+        if len(items) <= 1:
+            return
+            
+        mid = len(items) // 2
+        left = items[:mid]
+        right = items[mid:]
+        
+        self.sort(left, before)
+        self.sort(right, before)
+        
+        i = j = k = 0
+        while i < len(left) and j < len(right):
+            if before(right[j], left[i]):
+                items[k] = right[j]
+                j += 1
+            else:
+                items[k] = left[i]
+                i += 1
+            k += 1
+            
+        while i < len(left):
+            items[k] = left[i]
+            i += 1
+            k += 1
+            
+        while j < len(right):
+            items[k] = right[j]
+            j += 1
+            k += 1
 
 
 class ShellSort(SortStrategy):
@@ -43,7 +71,23 @@ class ShellSort(SortStrategy):
     name = "shellsort"
 
     def sort(self, items: list, before: Comparator) -> None:
-        raise NotImplementedError("[sin implementar] ShellSort.sort")
+        n = len(items)
+        if n <= 1:
+            return
+            
+        h = 1
+        while h < n // 3:
+            h = 3 * h + 1
+            
+        while h >= 1:
+            for i in range(h, n):
+                temp = items[i]
+                j = i
+                while j >= h and before(temp, items[j - h]):
+                    items[j] = items[j - h]
+                    j -= h
+                items[j] = temp
+            h //= 3
 
 
 class DiagnosticComparators:
