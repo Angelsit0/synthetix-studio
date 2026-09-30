@@ -14,17 +14,22 @@ class History:
 
     def record(self, previous_state: str) -> None:
         """Se llama ANTES de modificar: apila el estado anterior en Undo y vacía Redo."""
-        # TODO(Luis): self._undo.push(previous_state); self._redo.clear()
-        # Se deja vacío a propósito para que las ediciones funcionen mientras tanto.
-        pass
+        self._undo.push(previous_state)
+        self._redo.clear()
 
     def undo(self, current_state: str) -> str:
         """Devuelve el estado a restaurar; el estado actual pasa a la pila Redo."""
-        raise NotImplementedError("[sin implementar] History.undo")
+        if not self.can_undo():
+            return current_state
+        self._redo.push(current_state)
+        return self._undo.pop()
 
     def redo(self, current_state: str) -> str:
         """Devuelve el estado a restaurar; el estado actual pasa a la pila Undo."""
-        raise NotImplementedError("[sin implementar] History.redo")
+        if not self.can_redo():
+            return current_state
+        self._undo.push(current_state)
+        return self._redo.pop()
 
     def can_undo(self) -> bool:
         return not self._undo.is_empty()
