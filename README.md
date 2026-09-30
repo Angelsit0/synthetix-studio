@@ -78,6 +78,78 @@ vigente del modelo.
 | | `results` | Muestra las respuestas recibidas |
 | General | `help`, `exit` | Ayuda / salir |
 
+## Ejemplos de uso
+Sesiones reales copiadas de la consola. El indicador `synthetix(<archivo>)>` muestra el
+archivo activo.
+
+**Configuración** — el programa ya la leyó al iniciar; `config` permite recargarla y
+muestra lo que se usará:
+```text
+synthetix> config config.json
+Configuración cargada desde config.json
+  Respaldos: ./backups
+  Logs:      ./logs
+  API:       https://api.groq.com/openai/v1/chat/completions (modelo llama-3.3-70b-versatile)
+  Clave API: NO encontrada en la variable de entorno
+```
+
+**Archivos en la lista enlazada** — crear (con contenido inicial opcional, `\n` separa
+líneas), listar, cambiar el activo y eliminar:
+```text
+synthetix> new main.py
+Archivo creado: [1] main.py (ahora es el activo)
+synthetix(main.py)> new util.py "def doble(x):\n    return x * 2"
+Archivo creado: [2] util.py (ahora es el activo)
+synthetix(util.py)> list
+Archivos abiertos (2):
+    1. [id 1] main.py  - 1 líneas
+  * 2. [id 2] util.py  - 2 líneas  (activo)
+synthetix(util.py)> switch main.py
+Archivo activo: main.py
+synthetix(main.py)> delete util.py
+Archivo eliminado: util.py
+synthetix(main.py)> switch 9
+[error] No existe el archivo '9'
+```
+`switch` y `delete` aceptan el id (`switch 1`) o el nombre (`switch main.py`).
+
+**Análisis estático** — `write` reemplaza el contenido (se termina con una línea `.`) y
+`lint` muestra los diagnósticos en orden de aparición:
+```text
+synthetix(main.py)> write
+Escribe el nuevo contenido de main.py. Termina con una línea que solo tenga '.'
+from os import *
+
+def procesar(datos):   
+    for d in datos:
+        if d:
+            while d:
+                if d > 1:
+                    d -= 1
+                    print(d)
+    # TODO: revisar
+    return datos
+.
+synthetix(main.py)> lint
+LÍNEA  GRAVEDAD  REGLA                   MENSAJE
+1      WARNING   wildcard-import         Importación con '*': importa solo lo que uses
+3      INFO      function-lines          La función procesar tiene 9 líneas
+3      INFO      trailing-whitespace     Espacios en blanco al final de la línea
+8      WARNING   deep-nesting            Bloque con 5 niveles de indentación (máximo 4)
+10     INFO      todo-comment            Comentario pendiente: # TODO: revisar
+5 diagnósticos en main.py
+```
+Esos mismos diagnósticos son los que ordena `sort line mergesort` o
+`sort severity shellsort desc`.
+
+**Salida con respaldo automático** — los archivos modificados sin guardar se respaldan en la
+carpeta `paths.backups`:
+```text
+synthetix(main.py)> exit
+Cerrando Synthetix Studio...
+Respaldo automático: ./backups\main.py_20260930_000625.bak
+```
+
 ## Arquitectura
 
 ```mermaid
