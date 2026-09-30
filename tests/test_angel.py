@@ -92,5 +92,73 @@ class TestStaticAnalyzer(unittest.TestCase):
         self.assertFalse(any(d.severity >= Severity.WARNING for d in diagnosticos))
 
 
+class TestLinkedListExtra(unittest.TestCase):
+    """Casos de eliminación: único, primero, último y medio, revisando los enlaces."""
+
+    @staticmethod
+    def _lista(*valores):
+        lista = LinkedList()
+        for valor in valores:
+            lista.push_back(valor)
+        return lista
+
+    def test_eliminar_unico_nodo(self):
+        lista = self._lista("solo")
+        nodo = lista._head
+        self.assertTrue(lista.remove_at(0))
+        self.assertTrue(lista.is_empty())
+        self.assertIsNone(lista._head)
+        self.assertIsNone(lista._tail)
+        self.assertIsNone(nodo.prev)
+        self.assertIsNone(nodo.next)
+        with self.assertRaises(IndexError):
+            lista.at(0)
+        self.assertFalse(lista.remove_at(0))
+
+    def test_eliminar_primero_ultimo_medio_desenlaza(self):
+        lista = self._lista(1, 2, 3, 4, 5)
+        primero = lista._head
+        lista.remove_at(0)
+        self.assertIsNone(primero.next)
+        self.assertEqual(lista._head.value, 2)
+        self.assertIsNone(lista._head.prev)
+
+        ultimo = lista._tail
+        lista.remove_at(len(lista) - 1)
+        self.assertIsNone(ultimo.prev)
+        self.assertEqual(lista._tail.value, 4)
+        self.assertIsNone(lista._tail.next)
+
+        medio = lista._head.next
+        lista.remove_at(1)
+        self.assertIsNone(medio.prev)
+        self.assertIsNone(medio.next)
+        self.assertEqual(list(lista), [2, 4])
+        self.assertIs(lista._head.next, lista._tail)
+        self.assertIs(lista._tail.prev, lista._head)
+
+    def test_indices_negativos(self):
+        lista = self._lista("a")
+        self.assertFalse(lista.remove_at(-1))
+        with self.assertRaises(IndexError):
+            lista.at(-1)
+
+
+class TestFileManagerExtra(unittest.TestCase):
+    def test_eliminar_activo_pasa_al_siguiente(self):
+        fm = FileManager()
+        fm.create("a.py", "")
+        b = fm.create("b.py", "")
+        c = fm.create("c.py", "")
+        fm.switch_to("b.py")
+        self.assertTrue(fm.remove(str(b.id)))
+        self.assertIs(fm.active, c)
+        self.assertEqual([f.name for f in fm], ["a.py", "c.py"])
+
+    def test_nombre_vacio(self):
+        with self.assertRaises(ValueError):
+            FileManager().create("   ", "")
+
+
 if __name__ == "__main__":
     unittest.main()
