@@ -23,19 +23,33 @@ class Stack:
 
     def push(self, value: Any) -> None:
         """Apila. Esperado O(1)."""
-        raise NotImplementedError("[sin implementar] Stack.push")
+        self._top = _Node(value, self._top)
+        self._size += 1
 
     def pop(self) -> Any:
         """Desapila y devuelve el tope. O(1). IndexError si está vacía."""
-        raise NotImplementedError("[sin implementar] Stack.pop")
+        if self.is_empty():
+            raise IndexError("pop from empty stack")
+        value = self._top.value
+        self._top = self._top.next
+        self._size -= 1
+        return value
 
     def peek(self) -> Any:
         """Consulta el tope sin sacarlo. O(1). IndexError si está vacía."""
-        raise NotImplementedError("[sin implementar] Stack.peek")
+        if self.is_empty():
+            raise IndexError("peek from empty stack")
+        return self._top.value
 
     def clear(self) -> None:
         """Vacía la pila. O(n)."""
-        raise NotImplementedError("[sin implementar] Stack.clear")
+        current = self._top
+        while current:
+            next_node = current.next
+            current.next = None
+            current = next_node
+        self._top = None
+        self._size = 0
 
     def __len__(self) -> int:
         return self._size
