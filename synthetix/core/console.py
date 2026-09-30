@@ -15,7 +15,13 @@ class Console:
         self._ctx = ctx
 
     def run(self) -> None:
-        print("Synthetix Studio - Mini IDE por consola. Escribe 'help' para ver los comandos.")
+        mascot = r"""
+   /\_/\   
+  ( o.o )  Synthetix Studio
+   > ^ <   Mini IDE por consola
+"""
+        print(f"\033[38;5;183m{mascot}\033[0m")
+        print("\033[90m  Escribe 'help' para ver los comandos.\033[0m\n")
         while self._ctx.running:
             try:
                 line = input(self._prompt())
@@ -47,4 +53,6 @@ class Console:
 
     def _prompt(self) -> str:
         active = self._ctx.files.active
-        return f"synthetix({active.name})> " if active else "synthetix> "
+        if active:
+            return f"\033[92msynthetix\033[0m(\033[96m{active.name}\033[0m)> "
+        return "\033[92msynthetix\033[0m> "
