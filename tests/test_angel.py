@@ -144,5 +144,21 @@ class TestLinkedListExtra(unittest.TestCase):
             lista.at(-1)
 
 
+class TestFileManagerExtra(unittest.TestCase):
+    def test_eliminar_activo_pasa_al_siguiente(self):
+        fm = FileManager()
+        fm.create("a.py", "")
+        b = fm.create("b.py", "")
+        c = fm.create("c.py", "")
+        fm.switch_to("b.py")
+        self.assertTrue(fm.remove(str(b.id)))
+        self.assertIs(fm.active, c)
+        self.assertEqual([f.name for f in fm], ["a.py", "c.py"])
+
+    def test_nombre_vacio(self):
+        with self.assertRaises(ValueError):
+            FileManager().create("   ", "")
+
+
 if __name__ == "__main__":
     unittest.main()
