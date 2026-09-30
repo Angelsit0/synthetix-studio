@@ -35,23 +35,36 @@ La clave **nunca** va en el código ni en `config.json` (el repositorio es compa
 en el historial de Git). `config.json` solo guarda el nombre de la variable de entorno
 (`api.api_key_env`, por defecto `SYNTHETIX_API_KEY`).
 
-1. Crear una cuenta en el proveedor configurado en `config.json` (por defecto Groq:
-   [console.groq.com](https://console.groq.com)) y generar una clave en **API Keys → Create API
-   Key**. Se muestra una sola vez: copiarla.
-2. Guardarla como variable de entorno **permanente** en Windows:
+#### Opción A — IA local con Ollama (configuración por defecto)
+No necesita cuenta ni conexión a Internet. `config.json` viene configurado para Ollama.
+
+1. Instalar [Ollama](https://ollama.com) y descargar el modelo:
    ```powershell
-   setx SYNTHETIX_API_KEY "la_clave"
+   ollama pull qwen2.5-coder:1.5b
    ```
-   `setx` no afecta a la terminal abierta: cerrarla y abrir una nueva.
-3. Comprobar la conexión (hace una sola llamada real):
+2. Dejar Ollama corriendo (se abre solo al instalar, o con `ollama serve`).
+3. Definir la variable de entorno (Ollama no la usa, pero el programa exige que exista):
+   ```powershell
+   setx SYNTHETIX_API_KEY "ollama"
+   ```
+4. Comprobar la conexión (hace una sola llamada real):
    ```powershell
    python scripts/verificar.py --probar-ia
    ```
    Debe mostrar `[ OK  ] La IA respondió`.
 
-**Cambiar de proveedor**: el cliente habla el formato OpenAI-compatible, así que basta con cambiar
+#### Opción B — Proveedor en la nube (Groq, Gemini, OpenRouter, OpenAI)
+1. Crear una cuenta en el proveedor y generar una clave de API.
+2. Guardarla como variable de entorno permanente en Windows:
+   ```powershell
+   setx SYNTHETIX_API_KEY "la_clave"
+   ```
+   `setx` no afecta a la terminal abierta: cerrarla y abrir una nueva.
+
+**Cambiar de proveedor**: el cliente habla el formato OpenAI-compatible; basta con cambiar
 `api.base_url` y `api.model` en `config.json` (y usar la clave de ese proveedor). Por ejemplo,
-Gemini usa `https://generativelanguage.googleapis.com/v1beta/openai` y OpenRouter
+Groq usa `https://api.groq.com/openai/v1`, Gemini usa
+`https://generativelanguage.googleapis.com/v1beta/openai` y OpenRouter
 `https://openrouter.ai/api/v1`; el nombre vigente del modelo está en la documentación de cada uno.
 
 | `results` muestra | Qué hacer |
@@ -120,8 +133,8 @@ synthetix> config config.json
 Configuración cargada desde config.json
   Respaldos: ./backups
   Logs:      ./logs
-  API:       https://api.groq.com/openai/v1/chat/completions (modelo llama-3.3-70b-versatile)
-  Clave API: NO encontrada en la variable de entorno
+  API:       http://localhost:11434/v1/chat/completions (modelo qwen2.5-coder:1.5b)
+  Clave API: encontrada en $SYNTHETIX_API_KEY
 ```
 
 **Archivos en la lista enlazada** — crear (con contenido inicial opcional, `\n` separa
