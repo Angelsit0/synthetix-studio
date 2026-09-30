@@ -8,10 +8,10 @@
     "logs": "./logs"
   },
   "api": {
-    "provider": "openai-compatible",
-    "base_url": "https://api.groq.com/openai/v1",
+    "provider": "gemini-openai-compatible",
+    "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
     "endpoint": "/chat/completions",
-    "model": "llama-3.3-70b-versatile",
+    "model": "gemini-2.5-flash",
     "api_key_env": "SYNTHETIX_API_KEY",
     "timeout_seconds": 30,
     "max_tokens": 1024
