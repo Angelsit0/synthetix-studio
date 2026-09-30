@@ -7,6 +7,7 @@ import json
 import os
 import sys
 import tempfile
+import threading
 import time
 import unittest
 
@@ -115,6 +116,114 @@ class TestRequestBuffer(unittest.TestCase):
             buffer.stop()
         self.assertEqual(ia.llamadas, ["archivo0.py", "archivo1.py", "archivo2.py"])
         self.assertIn("archivo2.py", buffer.results_report())
+
+
+class TestQueueExtra(unittest.TestCase):
+    def test_front_vacia_y_clear(self):
+        cola = Queue()
+        with self.assertRaises(IndexError):
+            cola.front()
+        for valor in ("a", "b"):
+            cola.enqueue(valor)
+        cola.clear()
+        self.assertTrue(cola.is_empty())
+        self.assertEqual(list(cola), [])
+        cola.enqueue("c")
+        self.assertEqual((cola.front(), len(cola)), ("c", 1))
+
+
+class TestAIClientRespuestas(unittest.TestCase):
+    def setUp(self):
+        self.cliente = AIClient(_config_de_prueba(), HttpClient(), Logger())
+
+    @staticmethod
+    def _respuesta(texto):
+        return HttpResponse(status=200, body=json.dumps({"choices": [{"message": {"content": texto}}]}))
+
+    def test_limite_de_uso(self):
+        resultado = self.cliente._parse_response(HttpResponse(status=429, body="{}"))
+        self.assertFalse(resultado.ok)
+        self.assertIn("429", resultado.error)
+
+    def test_etiquetas_con_markdown_y_tilde(self):
+        texto = "**COMPLEJIDAD:** O(n log n)\n\n**REFACTORIZACIÓN:**\n- extraer una función"
+        resultado = self.cliente._parse_response(self._respuesta(texto))
+        self.assertEqual(resultado.complexity, "O(n log n)")
+        self.assertEqual(resultado.refactoring, "- extraer una función")
+
+    def test_sin_etiquetas_no_pierde_la_respuesta(self):
+        resultado = self.cliente._parse_response(self._respuesta("Todo es O(1)."))
+        self.assertTrue(resultado.ok)
+        self.assertIn("O(1)", resultado.complexity)
+
+
+class _IABloqueada:
+    """IA falsa que se queda 'pensando' hasta que la prueba la libera (sin depender de tiempos)."""
+
+    def __init__(self):
+        self.empezo = threading.Event()
+        self.liberar = threading.Event()
+
+    def analyze(self, file_name, code):
+        self.empezo.set()
+        self.liberar.wait(5)
+        return AnalysisResult(ok=True, complexity="O(1)", refactoring="nada", raw="ok")
+
+
+class _IAQueFalla:
+    def __init__(self):
+        self.llamadas = 0
+
+    def analyze(self, file_name, code):
+        self.llamadas += 1
+        if self.llamadas == 1:
+            raise ValueError("explotó")
+        return AnalysisResult(ok=True, complexity="O(n)", refactoring="nada", raw="ok")
+
+
+class TestRequestBufferExtra(unittest.TestCase):
+    def test_estado_uno_en_proceso_y_pendientes_en_orden(self):
+        ia = _IABloqueada()
+        buffer = RequestBuffer(ia, Logger())
+        buffer.start()
+        try:
+            for nombre in ("a.py", "b.py", "c.py"):
+                buffer.submit(nombre, "x = 1")
+            self.assertTrue(ia.empezo.wait(5))
+            estado = buffer.status_report()
+            self.assertIn("En proceso: #1 a.py", estado)
+            self.assertIn("1. #2 b.py", estado)
+            self.assertIn("2. #3 c.py", estado)
+            self.assertLess(estado.index("#2 b.py"), estado.index("#3 c.py"))
+        finally:
+            ia.liberar.set()
+            buffer.stop()
+
+    def test_stop_no_se_cuelga(self):
+        buffer = RequestBuffer(_IAFalsa(), Logger())
+        buffer.start()
+        inicio = time.time()
+        buffer.stop()
+        self.assertLess(time.time() - inicio, 2)
+        with self.assertRaises(RuntimeError):
+            buffer.submit("a.py", "x = 1")
+
+    def test_una_excepcion_no_mata_al_hilo(self):
+        ia = _IAQueFalla()
+        buffer = RequestBuffer(ia, Logger())
+        buffer.start()
+        try:
+            buffer.submit("malo.py", "x = 1")
+            buffer.submit("bueno.py", "x = 1")
+            limite = time.time() + 5
+            while "Respuestas sin ver: 2" not in buffer.status_report() and time.time() < limite:
+                time.sleep(0.02)
+        finally:
+            buffer.stop()
+        reporte = buffer.results_report()
+        self.assertIn("Error: fallo inesperado: explotó", reporte)
+        self.assertIn("COMPLEJIDAD:\n  O(n)", reporte)
+        self.assertNotIn("[error]", reporte)
 
 
 if __name__ == "__main__":

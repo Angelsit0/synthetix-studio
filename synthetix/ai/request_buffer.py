@@ -10,10 +10,12 @@ from __future__ import annotations
 
 import threading
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Optional
 
 from synthetix.ai.ai_client import AIClient, AnalysisResult
 from synthetix.ds.fifo_queue import Queue
+from synthetix.ds.linked_list import LinkedList
 from synthetix.util.logger import Logger
 
 
@@ -38,7 +40,7 @@ class RequestBuffer:
         self._client = client
         self._logger = logger
         self._pending = Queue()
-        self._completed: list = []
+        self._completed = LinkedList()   # CompletedRequest en orden de llegada
         self._lock = threading.Lock()
         self._condition = threading.Condition(self._lock)
         self._worker: Optional[threading.Thread] = None
@@ -47,29 +49,151 @@ class RequestBuffer:
         self._processing: Optional[AnalysisRequest] = None
 
     def start(self) -> None:
-        """Lanza el hilo trabajador (daemon=True)."""
-        # TODO(Alfredo): self._running = True
-        #   self._worker = threading.Thread(target=self._worker_loop, daemon=True); start()
-        pass
+        """Lanza el ÚNICO hilo trabajador (daemon=True: no impide cerrar el programa)."""
+        with self._condition:
+            if self._running:
+                return
+            self._running = True
+        self._worker = threading.Thread(target=self._worker_loop, name="synthetix-ia",
+                                        daemon=True)
+        self._worker.start()
 
     def stop(self) -> None:
-        """Avisa al hilo, espera a que termine la petición en curso y hace join."""
-        # TODO(Alfredo): with self._condition: self._running = False; notify_all(); join()
-        pass
+        """Avisa al hilo, espera a que termine la petición en curso y hace join.
+
+        Las peticiones que seguían pendientes se descartan (quedan anotadas en el log):
+        así 'exit' no espera a que la IA responda toda la cola. Si hay una petición en
+        curso, el join puede tardar hasta api.timeout_seconds.
+        """
+        with self._condition:
+            if not self._running:
+                return
+            self._running = False
+            discarded = len(self._pending)
+            self._pending.clear()
+            self._condition.notify_all()     # despierta al hilo si estaba esperando
+        if discarded:
+            self._logger.info(f"IA: cola detenida, {discarded} peticiones pendientes descartadas")
+        if self._worker is not None:
+            self._worker.join()
+            self._worker = None
 
     def submit(self, file_name: str, code: str) -> int:
-        """Encola bajo lock, notifica al hilo y devuelve el id de la solicitud."""
-        raise NotImplementedError("[sin implementar] RequestBuffer.submit")
+        """Encola bajo lock, notifica al hilo y devuelve el id de la solicitud. O(1).
+
+        Es el PRODUCTOR: no espera a la IA, así la consola sigue respondiendo.
+        """
+        with self._condition:
+            if not self._running:
+                raise RuntimeError("La cola de peticiones a la IA no está activa")
+            request = AnalysisRequest(self._next_id, file_name, code,
+                                      datetime.now().strftime("%H:%M:%S"))
+            self._next_id += 1
+            self._pending.enqueue(request)
+            self._condition.notify()         # hay trabajo: despertar al hilo trabajador
+        self._logger.info(f"IA: solicitud #{request.id} encolada ({file_name})")
+        return request.id
 
     def status_report(self) -> str:
-        """Texto para queue-status: en proceso, pendientes en orden FIFO y completadas sin ver."""
-        raise NotImplementedError("[sin implementar] RequestBuffer.status_report")
+        """Texto para queue-status: en proceso, pendientes en orden FIFO y completadas sin ver.
+        O(p + c), con p = pendientes y c = completadas."""
+        with self._condition:
+            lines = ["Cola de peticiones a la IA (FIFO, un solo hilo despacha de una en una):"]
+            if self._processing is None:
+                lines.append("  En proceso: ninguna")
+            else:
+                lines.append(f"  En proceso: {self._describe(self._processing)}")
+            if self._pending.is_empty():
+                lines.append("  Pendientes: ninguna")
+            else:
+                lines.append(f"  Pendientes ({len(self._pending)}), en orden de salida:")
+                position = 1
+                for request in self._pending:
+                    lines.append(f"    {position}. {self._describe(request)}")
+                    position += 1
+            unseen = self._count_unseen()
+            hint = "  (usa 'results')" if unseen else ""
+            lines.append(f"  Respuestas sin ver: {unseen}{hint}")
+        return "\n".join(lines)
 
     def results_report(self) -> str:
-        """Texto para results (marca como vistas las completadas)."""
-        raise NotImplementedError("[sin implementar] RequestBuffer.results_report")
+        """Texto para results (marca como vistas las completadas). O(c)."""
+        with self._condition:
+            report = ""
+            for done in self._completed:
+                if done.shown:
+                    continue
+                done.shown = True
+                if report:
+                    report += "\n\n"
+                report += self._format_result(done)
+        if not report:
+            return "No hay respuestas nuevas de la IA. Usa 'queue-status' para ver la cola."
+        return report
 
     def _worker_loop(self) -> None:
-        """while True: esperar con condition.wait() hasta que haya pendientes o se detenga;
-        dequeue; SOLTAR el lock durante la llamada HTTP; volver a tomarlo y guardar el resultado."""
-        raise NotImplementedError("[sin implementar] RequestBuffer._worker_loop")
+        """CONSUMIDOR: espera trabajo, saca la primera petición y la despacha.
+
+        El lock se SUELTA durante la llamada a la IA (que puede tardar segundos): mientras
+        tanto submit y queue-status siguen funcionando. Solo este hilo llama a la IA, así
+        que nunca hay dos peticiones HTTP a la vez.
+        """
+        while True:
+            with self._condition:
+                # while y no if: al despertar se vuelve a comprobar la condición.
+                while self._running and self._pending.is_empty():
+                    self._condition.wait()
+                if not self._running:
+                    return
+                request = self._pending.dequeue()
+                self._processing = request
+
+            result = self._call_ai(request)          # sin el lock
+
+            with self._condition:
+                self._completed.push_back(CompletedRequest(request.id, request.file_name,
+                                                           result))
+                self._processing = None
+            estado = "ok" if result.ok else "con error"
+            self._logger.info(f"IA: solicitud #{request.id} terminada ({estado})")
+
+    # ------------------------------------------------------------------ ayudas
+
+    def _call_ai(self, request: AnalysisRequest) -> AnalysisResult:
+        """Llama a la IA sin dejar que una excepción inesperada mate al hilo trabajador."""
+        try:
+            return self._client.analyze(request.file_name, request.code)
+        except Exception as e:  # noqa: BLE001 - el hilo no debe morir nunca
+            self._logger.error(f"IA: fallo inesperado en #{request.id}: {e}")
+            return AnalysisResult(error=f"fallo inesperado: {e}")
+
+    def _count_unseen(self) -> int:
+        """Completadas que el usuario aún no vio con 'results'. Llamar con el lock tomado."""
+        count = 0
+        for done in self._completed:
+            if not done.shown:
+                count += 1
+        return count
+
+    @staticmethod
+    def _describe(request: AnalysisRequest) -> str:
+        return f"#{request.id} {request.file_name} (encolada a las {request.created_at})"
+
+    @staticmethod
+    def _format_result(done: CompletedRequest) -> str:
+        """Bloque de texto de una respuesta. Los errores se muestran como 'Error:' y no
+        como '[error]', que es la marca de fallo de un comando en la consola."""
+        header = f"=== Solicitud #{done.id}: {done.file_name} ==="
+        result = done.result
+        if not result.ok:
+            return f"{header}\nError: {result.error}"
+        return (f"{header}\nCOMPLEJIDAD:\n{RequestBuffer._indent(result.complexity)}"
+                f"\nREFACTORIZACION:\n{RequestBuffer._indent(result.refactoring)}")
+
+    @staticmethod
+    def _indent(text: str) -> str:
+        """Sangra cada línea con dos espacios para que se lea como bloque."""
+        indented = ""
+        for line in text.split("\n"):
+            indented += "  " + line + "\n"
+        return indented.rstrip("\n")

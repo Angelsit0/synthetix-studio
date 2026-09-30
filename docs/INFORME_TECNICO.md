@@ -22,7 +22,8 @@
     propio archivo sin pisar a los demás.
 - Patrón **Strategy** en el motor de ordenamiento *(Luis)*.
 - Patrón **Memento** en Undo/Redo *(Luis)*.
-- **Productor–consumidor** en el buffer de peticiones *(Alfredo)*.
+- **Productor–consumidor** en el buffer de peticiones *(Alfredo)*: la consola produce
+  peticiones y un único hilo las consume en orden FIFO (detalle en la sección 5).
 
 ## 2. Estructuras de datos propias
 
@@ -35,7 +36,10 @@
 | `FileManager` (Angel) | `create` | O(n) | recorre para rechazar nombres repetidos; la inserción es O(1) |
 | `FileManager` (Angel) | `find`, `switch_to`, `remove` | O(n) | búsqueda por id o nombre con `index_of`; `remove` además usa `remove_at` |
 | `Stack` (Luis) | `push`, `pop`, `peek` | O(1) | se opera solo en el tope |
-| `Queue` (Alfredo) | `enqueue`, `dequeue` | O(1) (*) | referencias `_front` y `_back` |
+| `Queue` (Alfredo) | `enqueue`, `dequeue`, `front` | O(1) | `enqueue` engancha detrás de `_back` y `dequeue` saca de `_front`: nunca se recorre; al vaciarse, `_back` vuelve a None |
+| `Queue` (Alfredo) | `__iter__`, `clear` | O(n) | visitan cada nodo una vez; `clear` y `dequeue` desenlazan (`next` = None) los nodos que quitan |
+| `RequestBuffer` (Alfredo) | `submit` | O(1) | un `enqueue` con el lock tomado |
+| `RequestBuffer` (Alfredo) | `status_report`, `results_report` | O(p + c) | recorren las p pendientes y las c completadas |
 
 ## 3. Algoritmos
 
@@ -120,8 +124,75 @@ de Git aunque luego se borre, y cualquiera podría gastar la cuota. Por eso el a
 el nombre de la variable (`SYNTHETIX_API_KEY`) y cada persona define la clave en su propia PC.
 
 ## 5. Integración con la IA *(Alfredo)*
-Endpoint, formato de la petición, cómo se extrae Big O y refactorización, manejo de errores.
-Por qué un solo hilo trabajador + cola FIFO evita saturar el cliente HTTP.
+
+### 5.0 Proveedor de IA
+El proyecto viene configurado para **Ollama** (`qwen2.5-coder:1.5b`), una IA local que corre en
+la misma máquina sin necesidad de clave ni conexión a Internet. Al ser un endpoint
+OpenAI-compatible (`http://localhost:11434/v1/chat/completions`), el mismo `AIClient` funciona
+con cualquier proveedor cloud (Groq, Gemini, OpenRouter, OpenAI) cambiando solo `api.base_url` y
+`api.model` en `config.json`. Se eligió Ollama porque los proveedores en la nube bloqueaban la
+conexión del equipo (403 por VPN/región).
+
+### 5.1 Petición HTTP
+`HttpClient.post_json` usa solo `urllib.request` y **nunca lanza excepciones**: una respuesta
+2xx devuelve código y cuerpo; un error HTTP (`HTTPError`: 401, 429, 500...) devuelve su código y
+su cuerpo; un error de red (`URLError`, timeout, `OSError`) o una URL mal escrita (`ValueError`)
+se devuelve como texto en `error`. Así quien llama decide qué mensaje mostrar y el hilo de la
+cola nunca muere por un problema de red.
+
+`AIClient` arma un cuerpo OpenAI-compatible con `json.dumps` y lo envía a
+`api.base_url + api.endpoint` (de `config.json`), con `Authorization: Bearer <clave>` y un
+`User-Agent` propio:
+```json
+{"model": "<api.model>", "max_tokens": 1024, "temperature": 0.2,
+ "messages": [{"role": "system", "content": "...responde EXACTAMENTE con COMPLEJIDAD: y REFACTORIZACION:..."},
+              {"role": "user", "content": "Analiza el archivo main.py:
+
+<código>"}]}
+```
+Si la variable de entorno de la clave está vacía, `analyze` devuelve el error sin tocar la red.
+
+### 5.2 Cómo se extraen Big O y la refactorización
+El texto llega en `choices[0].message.content`. Se recorre línea por línea: una línea que empieza
+con `COMPLEJIDAD` o `REFACTORIZACION` cambia la sección activa, y las demás líneas se agregan a la
+sección activa. Se toleran las variaciones típicas del modelo: markdown (`**COMPLEJIDAD:**`,
+`## ...`), minúsculas y la tilde de `REFACTORIZACIÓN`. Si el modelo no usa las etiquetas, la
+respuesta no se pierde: va completa como complejidad. Complejidad del análisis: O(L) en el
+largo L de la respuesta.
+
+### 5.3 Manejo de errores
+| Situación | Mensaje que ve el usuario en `results` |
+|---|---|
+| Sin clave | `falta la clave de la IA: define la variable de entorno SYNTHETIX_API_KEY` |
+| Sin red / timeout | `sin conexión con la IA: ...` |
+| 401 | `clave inválida (401): revisa la variable de entorno de la clave` |
+| 403 | `acceso denegado (403): el proveedor bloquea esta red o la clave no tiene permiso` |
+| 429 | `límite de uso alcanzado (429): espera un minuto y vuelve a intentar` |
+| Otro código | `la IA respondió HTTP <código>: <mensaje del proveedor>` |
+| JSON inesperado | `respuesta de la IA con formato inesperado` |
+
+Todos los errores quedan además en `logs/synthetix.log`. En `results` se muestran como
+`Error: ...` (no como `[error]`, que es la marca de un comando que falló en la consola).
+
+### 5.4 Productor–consumidor: por qué un solo hilo y una cola FIFO
+- **Productor**: el comando `analyze` llama `submit`, que con el lock tomado crea la solicitud
+  (copia del código y hora), la encola y hace `notify()`. Devuelve el id al instante: la consola
+  no espera a la IA.
+- **Consumidor**: un **único** hilo trabajador (`daemon`) espera con `condition.wait()` dentro de
+  un `while` (al despertar vuelve a comprobar la condición), saca la primera solicitud, la marca
+  como "en proceso" y **suelta el lock** durante la llamada HTTP. Al terminar vuelve a tomar el
+  lock y guarda el resultado en una `LinkedList` propia.
+- **Por qué un solo hilo evita saturar el cliente HTTP**: como solo ese hilo llama a la IA, nunca
+  hay dos peticiones en vuelo; si el usuario pide 3 análisis seguidos, salen de a uno y en el
+  orden en que se pidieron (FIFO estricto), sin disparar el límite de uso (429) del proveedor.
+- **Por qué se suelta el lock durante la llamada**: la IA tarda segundos; si el hilo guardara el
+  lock, `submit` y `queue-status` quedarían bloqueados y la consola se congelaría. El lock solo
+  protege las estructuras compartidas (`_pending`, `_processing`, `_completed`), nunca la red.
+- **Robustez**: cualquier excepción del cliente se convierte en un resultado con error, así el
+  hilo nunca muere.
+- **Cierre**: `stop` pone `_running = False`, descarta las pendientes (lo anota en el log), hace
+  `notify_all()` y `join()`. Si había una petición en curso, `exit` espera a que termine (como
+  máximo `api.timeout_seconds`).
 
 ## 6. Pruebas
 Salida final de `python scripts/verificar.py --estricto` y casos de `tests/smoke.txt` por módulo.

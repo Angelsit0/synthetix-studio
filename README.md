@@ -30,6 +30,50 @@ $env:SYNTHETIX_API_KEY="tu_clave"
 export SYNTHETIX_API_KEY="tu_clave"
 ```
 
+### Cómo conseguir y configurar la clave de la IA
+La clave **nunca** va en el código ni en `config.json` (el repositorio es compartido y quedaría
+en el historial de Git). `config.json` solo guarda el nombre de la variable de entorno
+(`api.api_key_env`, por defecto `SYNTHETIX_API_KEY`).
+
+#### Opción A — IA local con Ollama (configuración por defecto)
+No necesita cuenta ni conexión a Internet. `config.json` viene configurado para Ollama.
+
+1. Instalar [Ollama](https://ollama.com) y descargar el modelo:
+   ```powershell
+   ollama pull qwen2.5-coder:1.5b
+   ```
+2. Dejar Ollama corriendo (se abre solo al instalar, o con `ollama serve`).
+3. Definir la variable de entorno (Ollama no la usa, pero el programa exige que exista):
+   ```powershell
+   setx SYNTHETIX_API_KEY "ollama"
+   ```
+4. Comprobar la conexión (hace una sola llamada real):
+   ```powershell
+   python scripts/verificar.py --probar-ia
+   ```
+   Debe mostrar `[ OK  ] La IA respondió`.
+
+#### Opción B — Proveedor en la nube (Groq, Gemini, OpenRouter, OpenAI)
+1. Crear una cuenta en el proveedor y generar una clave de API.
+2. Guardarla como variable de entorno permanente en Windows:
+   ```powershell
+   setx SYNTHETIX_API_KEY "la_clave"
+   ```
+   `setx` no afecta a la terminal abierta: cerrarla y abrir una nueva.
+
+**Cambiar de proveedor**: el cliente habla el formato OpenAI-compatible; basta con cambiar
+`api.base_url` y `api.model` en `config.json` (y usar la clave de ese proveedor). Por ejemplo,
+Groq usa `https://api.groq.com/openai/v1`, Gemini usa
+`https://generativelanguage.googleapis.com/v1beta/openai` y OpenRouter
+`https://openrouter.ai/api/v1`; el nombre vigente del modelo está en la documentación de cada uno.
+
+| `results` muestra | Qué hacer |
+|---|---|
+| `falta la clave de la IA` | Definir la variable con `setx` y abrir una terminal nueva |
+| `clave inválida (401)` | La clave está mal copiada o es de otro proveedor |
+| `acceso denegado (403)` | El proveedor bloquea la red o el país desde donde se conecta: usar otro proveedor |
+| `límite de uso alcanzado (429)` | Plan gratuito agotado por el momento: esperar un minuto |
+
 ## Verificación
 ```bash
 python scripts/verificar.py              # estado del proyecto por integrante
@@ -89,8 +133,8 @@ synthetix> config config.json
 Configuración cargada desde config.json
   Respaldos: ./backups
   Logs:      ./logs
-  API:       https://api.groq.com/openai/v1/chat/completions (modelo llama-3.3-70b-versatile)
-  Clave API: NO encontrada en la variable de entorno
+  API:       http://localhost:11434/v1/chat/completions (modelo qwen2.5-coder:1.5b)
+  Clave API: encontrada en $SYNTHETIX_API_KEY
 ```
 
 **Archivos en la lista enlazada** — crear (con contenido inicial opcional, `\n` separa
@@ -141,6 +185,25 @@ LÍNEA  GRAVEDAD  REGLA                   MENSAJE
 ```
 Esos mismos diagnósticos son los que ordena `sort line mergesort` o
 `sort severity shellsort desc`.
+
+**Análisis con IA** — `analyze` encola el código activo y devuelve el control al instante; un
+único hilo despacha las solicitudes en orden FIFO. `queue-status` muestra la que está en proceso
+y las pendientes en orden, y `results` muestra las respuestas nuevas:
+```text
+synthetix(main.py)> analyze
+Solicitud #1 encolada para main.py. Usa 'queue-status' para ver la cola y 'results' para ver respuestas.
+synthetix(main.py)> queue-status
+Cola de peticiones a la IA (FIFO, un solo hilo despacha de una en una):
+  En proceso: ninguna
+  Pendientes: ninguna
+  Respuestas sin ver: 1  (usa 'results')
+synthetix(main.py)> results
+=== Solicitud #1: main.py ===
+Error: falta la clave de la IA: define la variable de entorno SYNTHETIX_API_KEY
+```
+Con la clave configurada, cada respuesta trae las secciones `COMPLEJIDAD:` (Big O) y
+`REFACTORIZACION:`; si se piden varios análisis seguidos, `queue-status` muestra uno
+`En proceso` y los demás como `Pendientes`, numerados en el orden en que saldrán.
 
 **Salida con respaldo automático** — los archivos modificados sin guardar se respaldan en la
 carpeta `paths.backups`:
