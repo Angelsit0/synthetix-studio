@@ -1,0 +1,40 @@
+# Prueba de humo:  python main.py config.json < tests/smoke.txt
+# Recorre todos los comandos del enunciado. Mientras un módulo no esté listo,
+# verá "[sin implementar] ..." en vez de caerse.
+help
+new main.py
+write
+from math import *
+
+def suma(a, b):
+    return a + b   # TODO: validar tipos
+
+def main():
+    datos = [3, 1, 2]
+    print(suma(datos[0], datos[1]))
+
+main()
+.
+show
+new util.py "def doble(x):\n    return x * 2"
+list
+switch main.py
+check
+insert 5 "    roto = (a + b"
+check
+undo
+check
+redo
+history
+lint
+sort line mergesort
+sort severity shellsort desc
+analyze
+analyze
+queue-status
+results
+delete util.py
+list
+switch 1
+save
+exit

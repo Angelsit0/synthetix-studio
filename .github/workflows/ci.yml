@@ -1,0 +1,19 @@
+name: verificar
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Falla si algo rompe el proyecto (importaciones, consola que se cae, estructuras prohibidas).
+      # En la FASE DE INTEGRACIÓN cambiar la línea por:  python scripts/verificar.py --estricto
+      - name: Verificación completa
+        run: python scripts/verificar.py

@@ -1,0 +1,20 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Datos generados por el programa
+backups/*
+!backups/.gitkeep
+logs/*
+!logs/.gitkeep
+
+# Secretos (la API key va en variable de entorno, nunca en el repo)
+.env
+*.key
+
+# Editores / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
