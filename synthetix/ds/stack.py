@@ -29,16 +29,18 @@ class Stack:
     def pop(self) -> Any:
         """Desapila y devuelve el tope. O(1). IndexError si está vacía."""
         if self.is_empty():
-            raise IndexError("pop from empty stack")
-        value = self._top.value
-        self._top = self._top.next
+            raise IndexError("No se puede desapilar: la pila está vacía")
+        node = self._top
+        value = node.value
+        self._top = node.next
+        node.next = None    # desenlazar el nodo sacado para liberarlo
         self._size -= 1
         return value
 
     def peek(self) -> Any:
         """Consulta el tope sin sacarlo. O(1). IndexError si está vacía."""
         if self.is_empty():
-            raise IndexError("peek from empty stack")
+            raise IndexError("No se puede consultar el tope: la pila está vacía")
         return self._top.value
 
     def clear(self) -> None:

@@ -168,8 +168,11 @@ class LoadCommand(Command):
 
     def execute(self, args, ctx) -> None:
         path = args.rest(1)
-        with open(path, encoding="utf-8") as f:
-            content = f.read()
+        try:
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+        except FileNotFoundError:
+            raise RuntimeError(f"No se encontró el archivo '{path}' en el disco") from None
         file = ctx.files.create(os.path.basename(path), content)
         print(f"Cargado [{file.id}] {file.name} ({file.line_count()} líneas)")
 
