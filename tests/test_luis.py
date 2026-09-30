@@ -107,5 +107,11 @@ class TestOrdenamiento(unittest.TestCase):
         self.assertEqual([d.message for d in datos], ["x", "primero", "segundo", "tercero"])
 
 
+class TestSyntaxCheckerPython(unittest.TestCase):
+    def test_division_entera_y_escapes(self):
+        self.assertTrue(SyntaxChecker().check("mid = (len(items) // 2)\n").ok)
+        self.assertTrue(SyntaxChecker().check('s = "a\\"(b"\n').ok)
+
+
 if __name__ == "__main__":
     unittest.main()

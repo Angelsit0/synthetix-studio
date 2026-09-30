@@ -4,7 +4,9 @@ Casos a reportar:
   1. Cierre sin apertura:          "se encontró ')' sin apertura"
   2. Cierre que no corresponde:    "se encontró ')' pero se esperaba '}' (abierto en línea X)"
   3. Apertura sin cerrar al final: reportar la línea/columna donde se ABRIÓ
-Recomendado: ignorar delimitadores dentro de "cadenas", 'c', # comentarios, // y /* */.
+Se ignoran los delimitadores dentro de "cadenas", 'c' y # comentarios.
+No se tratan // ni /* */ como comentarios: en Python // es la división entera.
+Dentro de una cadena, la barra invertida escapa el carácter siguiente ("a\"(b").
 Complejidad esperada: O(n) tiempo, O(n) espacio en el peor caso.
 """
 from __future__ import annotations
@@ -32,39 +34,34 @@ class SyntaxChecker:
         
         in_string = False
         string_char = ''
-        in_block_comment = False
-        
+
         for line_idx, line in enumerate(lines):
             in_line_comment = False
             col_idx = 0
             while col_idx < len(line):
                 char = line[col_idx]
-                
+
+                # Escape dentro de una cadena: la barra invertida y el carácter
+                # siguiente se saltan juntos, así \" no cierra la cadena
+                if in_string and char == '\\':
+                    col_idx += 2
+                    continue
+
                 # Handling strings
-                if not in_line_comment and not in_block_comment:
+                if not in_line_comment:
                     if char in "\"'":
                         if in_string and string_char == char:
                             in_string = False
                         elif not in_string:
                             in_string = True
                             string_char = char
-                            
-                # Handling comments
-                if not in_string and not in_block_comment and not in_line_comment:
+
+                # Handling comments (solo #; // es división entera en Python)
+                if not in_string and not in_line_comment:
                     if char == '#':
                         in_line_comment = True
-                    elif char == '/' and col_idx + 1 < len(line) and line[col_idx+1] == '/':
-                        in_line_comment = True
-                        col_idx += 1
-                    elif char == '/' and col_idx + 1 < len(line) and line[col_idx+1] == '*':
-                        in_block_comment = True
-                        col_idx += 1
-                elif in_block_comment:
-                    if char == '*' and col_idx + 1 < len(line) and line[col_idx+1] == '/':
-                        in_block_comment = False
-                        col_idx += 1
-                        
-                if not in_string and not in_line_comment and not in_block_comment:
+
+                if not in_string and not in_line_comment:
                     if char in "({[":
                         stack.push((char, line_idx + 1, col_idx + 1))
                     elif char in ")}]":
