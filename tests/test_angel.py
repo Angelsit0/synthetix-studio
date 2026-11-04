@@ -2,14 +2,22 @@
 
     python -m unittest tests.test_angel -v
 """
+import contextlib
+import io
+import json
 import os
 import sys
+import tempfile
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from synthetix.analysis.diagnostic import Severity  # noqa: E402
 from synthetix.analysis.static_analyzer import StaticAnalyzer  # noqa: E402
+from synthetix.commands.core_commands import ConfigCommand  # noqa: E402
+from synthetix.commands.file_commands import LoadCommand  # noqa: E402
+from synthetix.config.config import Config, ConfigError  # noqa: E402
+from synthetix.core.app_context import AppContext  # noqa: E402
 from synthetix.core.command_args import CommandArgs  # noqa: E402
 from synthetix.ds.linked_list import LinkedList  # noqa: E402
 from synthetix.files.code_file import CodeFile  # noqa: E402
@@ -257,6 +265,39 @@ class TestCodeFile(unittest.TestCase):
         self.assertTrue(archivo.undo())
         self.assertFalse(archivo.undo())
         self.assertEqual(archivo.content, "v2\n")   # v0 y v1 se descartaron
+
+
+class TestRutasConEspacios(unittest.TestCase):
+    """El usuario de Windows puede tener espacios ('C:\\Users\\Angel Gabriel\\...')."""
+
+    def setUp(self):
+        self._carpeta = tempfile.TemporaryDirectory(prefix="con espacios ")
+        self.carpeta = self._carpeta.name
+        self.ruta = os.path.join(self.carpeta, "mi config.json")
+        with open(self.ruta, "w", encoding="utf-8") as f:
+            json.dump({"paths": {"logs": os.path.join(self.carpeta, "logs")},
+                       "editor": {"max_history": 7}}, f)
+
+    def tearDown(self):
+        self._carpeta.cleanup()
+
+    def test_comando_config_con_espacios_sin_comillas(self):
+        ctx = AppContext()
+        with contextlib.redirect_stdout(io.StringIO()):
+            ConfigCommand().execute(CommandArgs.parse("config " + self.ruta), ctx)
+        self.assertEqual(ctx.config.source_path, self.ruta)
+        self.assertEqual(ctx.files.max_history, 7)
+
+    def test_config_de_una_carpeta_da_mensaje_claro(self):
+        with self.assertRaises(ConfigError) as error:
+            Config().load_from_file(self.carpeta)
+        self.assertIn("es una carpeta", str(error.exception))
+
+    def test_load_de_una_carpeta_da_mensaje_claro(self):
+        ctx = AppContext()
+        with self.assertRaises(RuntimeError) as error:
+            LoadCommand().execute(CommandArgs.parse("load " + self.carpeta), ctx)
+        self.assertIn("es una carpeta", str(error.exception))
 
 
 if __name__ == "__main__":
