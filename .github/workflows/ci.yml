@@ -7,13 +7,18 @@ on:
 jobs:
   verificar:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # El README promete Python 3.10 o superior: se prueba el mínimo y versiones recientes.
+        python-version: ["3.10", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
 
-      # Falla si algo rompe el proyecto (importaciones, consola que se cae, estructuras prohibidas).
-      # En la FASE DE INTEGRACIÓN cambiar la línea por:  python scripts/verificar.py --estricto
+      # Falla si algo rompe el proyecto (importaciones, consola que se cae, estructuras
+      # prohibidas, pruebas unitarias) o si queda algo sin implementar.
       - name: Verificación completa
         run: python scripts/verificar.py --estricto
