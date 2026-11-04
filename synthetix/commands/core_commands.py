@@ -27,13 +27,14 @@ class ConfigCommand(Command):
     min_args = 1
 
     def execute(self, args, ctx) -> None:
+        path = args.rest(1)     # la ruta completa: puede tener espacios ("C:\Users\Angel Gabriel\...")
         try:
-            ctx.config.load_from_file(args[1])
+            ctx.config.load_from_file(path)
         except ConfigError as e:
-            raise RuntimeError(f"No se pudo cargar '{args[1]}': {e}") from None
+            raise RuntimeError(f"No se pudo cargar '{path}': {e}") from None
         ctx.apply_config()
-        ctx.logger.info(f"Configuración cargada desde {args[1]}")
-        print(f"Configuración cargada desde {args[1]}")
+        ctx.logger.info(f"Configuración cargada desde {path}")
+        print(f"Configuración cargada desde {path}")
         print(f"  Respaldos: {ctx.config.backup_dir}")
         print(f"  Logs:      {ctx.config.log_dir}")
         limite = ctx.files.max_history
