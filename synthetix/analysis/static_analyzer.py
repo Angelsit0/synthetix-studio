@@ -66,13 +66,8 @@ class StaticAnalyzer:
         """ERROR unbalanced-delimiters: usa el SyntaxChecker (pila) de Luis.
 
         Devuelve el resultado solo si hay error, para emitirlo al llegar a su línea.
-        Mientras SyntaxChecker no esté implementado en esta rama, la regla se omite
-        en lugar de romper todo el análisis.
         """
-        try:
-            result = SyntaxChecker().check(code)
-        except NotImplementedError:
-            return None
+        result = SyntaxChecker().check(code)
         if result.ok:
             return None
         return result
@@ -102,7 +97,9 @@ class StaticAnalyzer:
     @staticmethod
     def _check_wildcard_import(text: str, number: int, diagnostics: list) -> None:
         """WARNING wildcard-import: 'from modulo import *' esconde de dónde viene cada nombre."""
-        stripped = text.strip()
+        hash_position = text.find("#")
+        code = text if hash_position == -1 else text[:hash_position]   # sin el comentario
+        stripped = code.strip()
         if stripped.startswith("from ") and stripped.endswith("import *"):
             diagnostics.append(Diagnostic(number, Severity.WARNING, "wildcard-import",
                                           "Importación con '*': importa solo lo que uses"))
