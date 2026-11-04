@@ -43,6 +43,31 @@ class Stack:
             raise IndexError("No se puede consultar el tope: la pila está vacía")
         return self._top.value
 
+    def truncate(self, max_size: int) -> int:
+        """Conserva solo los max_size elementos más cercanos al tope y desenlaza el resto
+        (los más antiguos, en el fondo). Devuelve cuántos se descartaron.
+        O(max_size) para llegar al corte + O(descartados) para desenlazarlos."""
+        if max_size < 0:
+            raise ValueError("max_size no puede ser negativo")
+        if self._size <= max_size:
+            return 0
+        if max_size == 0:
+            discarded = self._size
+            self.clear()
+            return discarded
+        last_kept = self._top
+        for _ in range(max_size - 1):
+            last_kept = last_kept.next
+        current = last_kept.next
+        last_kept.next = None           # corta la cadena: lo de abajo ya no es alcanzable
+        while current:                  # desenlaza los nodos descartados
+            following = current.next
+            current.next = None
+            current = following
+        discarded = self._size - max_size
+        self._size = max_size
+        return discarded
+
     def clear(self) -> None:
         """Vacía la pila. O(n)."""
         current = self._top

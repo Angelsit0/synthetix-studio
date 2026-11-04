@@ -226,5 +226,38 @@ class TestCommandArgs(unittest.TestCase):
         self.assertEqual(CommandArgs.parse("save").rest(1), "")
 
 
+class TestCodeFile(unittest.TestCase):
+    def test_edicion_por_lineas(self):
+        archivo = CodeFile(1, "a.py", "uno\ntres\n")
+        archivo.insert_line(2, "dos")
+        archivo.replace_line(3, "TRES")
+        archivo.append_line("cuatro")
+        archivo.remove_line(1)
+        self.assertEqual(archivo.lines(), ["dos", "TRES", "cuatro"])
+        self.assertTrue(archivo.modified)
+
+    def test_lineas_fuera_de_rango(self):
+        archivo = CodeFile(1, "a.py", "uno\n")
+        with self.assertRaises(IndexError):
+            archivo.replace_line(2, "x")
+        with self.assertRaises(IndexError):
+            archivo.remove_line(0)
+        with self.assertRaises(IndexError):
+            archivo.insert_line(3, "x")   # se puede insertar en 1..2
+        self.assertFalse(archivo.modified)
+
+    def test_limite_de_historial(self):
+        archivos = FileManager()
+        archivos.set_max_history(2)
+        archivo = archivos.create("a.py", "v0\n")
+        for version in range(1, 5):
+            archivo.apply_edit(f"v{version}\n")
+        self.assertEqual(archivo.history.undo_count, 2)
+        self.assertTrue(archivo.undo())
+        self.assertTrue(archivo.undo())
+        self.assertFalse(archivo.undo())
+        self.assertEqual(archivo.content, "v2\n")   # v0 y v1 se descartaron
+
+
 if __name__ == "__main__":
     unittest.main()
