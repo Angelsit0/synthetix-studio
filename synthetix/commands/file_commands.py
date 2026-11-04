@@ -11,6 +11,8 @@ from synthetix.core.command import Command
 from synthetix.core.command_args import CommandArgs
 from synthetix.core.command_registry import CommandRegistry
 from synthetix.files.backup_manager import BackupManager
+from synthetix.util import colors
+from synthetix.util.colors import paint
 
 
 class NewCommand(Command):
@@ -39,13 +41,14 @@ class ListCommand(Command):
             print("No hay archivos abiertos. Usa 'new <nombre>'.")
             return
         active = ctx.files.active
-        print(f"\033[96mArchivos abiertos ({ctx.files.count()}):\033[0m")
+        print(paint(f"Archivos abiertos ({ctx.files.count()}):", colors.CYAN))
         for position, file in enumerate(ctx.files, start=1):
-            marca = "\033[92m  * \033[0m" if file is active else "    "
-            estado = "\033[93m, sin respaldar\033[0m" if file.modified else ""
-            activo = "\033[92m  (activo)\033[0m" if file is active else ""
-            print(f"{marca}{position}. [\033[90mid {file.id}\033[0m] \033[97m{file.name}\033[0m  - "
-                  f"\033[94m{file.line_count()} líneas\033[0m{estado}{activo}")
+            marca = paint("  * ", colors.GREEN) if file is active else "    "
+            estado = paint(", sin respaldar", colors.YELLOW) if file.modified else ""
+            activo = paint("  (activo)", colors.GREEN) if file is active else ""
+            print(f"{marca}{position}. [{paint(f'id {file.id}', colors.GRAY)}] "
+                  f"{paint(file.name, colors.WHITE)}  - "
+                  f"{paint(f'{file.line_count()} líneas', colors.BLUE)}{estado}{activo}")
 
 
 class SwitchCommand(Command):
@@ -86,9 +89,9 @@ class ShowCommand(Command):
     def execute(self, args, ctx) -> None:
         file = CommandUtils.active_file(ctx)
         lines = file.lines()
-        print(f"\033[96m--- {file.name} ({len(lines)} líneas) ---\033[0m")
+        print(paint(f"--- {file.name} ({len(lines)} líneas) ---", colors.CYAN))
         for number, text in enumerate(lines, start=1):
-            print(f"\033[92m{number:>4} |\033[0m \033[97m{text}\033[0m")
+            print(f"{paint(f'{number:>4} |', colors.GREEN)} {paint(text, colors.WHITE)}")
 
 
 class WriteCommand(Command):
