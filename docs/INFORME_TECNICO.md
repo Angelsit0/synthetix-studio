@@ -36,6 +36,7 @@
 | `FileManager` (Angel) | `create` | O(n) | recorre para rechazar nombres repetidos; la inserción es O(1) |
 | `FileManager` (Angel) | `find`, `switch_to`, `remove` | O(n) | búsqueda por id o nombre con `index_of`; `remove` además usa `remove_at` |
 | `Stack` (Luis) | `push`, `pop`, `peek` | O(1) | se opera solo en el tope |
+| `Stack` (Luis) | `truncate(m)` | O(n) | camina m nodos desde el tope, corta la cadena y desenlaza los n − m del fondo; lo usa `History` para limitar el Undo |
 | `Queue` (Alfredo) | `enqueue`, `dequeue`, `front` | O(1) | `enqueue` engancha detrás de `_back` y `dequeue` saca de `_front`: nunca se recorre; al vaciarse, `_back` vuelve a None |
 | `Queue` (Alfredo) | `__iter__`, `clear` | O(n) | visitan cada nodo una vez; `clear` y `dequeue` desenlazan (`next` = None) los nodos que quitan |
 | `RequestBuffer` (Alfredo) | `submit` | O(1) | un `enqueue` con el lock tomado |
@@ -46,7 +47,7 @@
 | Algoritmo | Tiempo | Espacio extra | Estable | Dueño |
 |---|---|---|---|---|
 | `SyntaxChecker.check` | O(n) | O(n) peor caso | — | Luis |
-| Undo / Redo | O(L) por copiar el texto de tamaño L | O(k·L) para k cambios | — | Luis |
+| Undo / Redo | O(L) por copiar el texto de tamaño L | O(k·L) para k cambios, con k ≤ `editor.max_history` | — | Luis |
 | MergeSort | O(n log n) en todos los casos | O(n) | Sí | Luis |
 | ShellSort (Knuth) | O(n^1.5) peor caso | O(1) | No | Luis |
 | `StaticAnalyzer.analyze` | O(C), C = total de caracteres; O(p·C) con funciones anidadas a profundidad p | O(d) diagnósticos | — | Angel |
@@ -71,7 +72,7 @@ aparición, **sin ordenar**: ordenarlos es trabajo de `sort` (MergeSort / ShellS
 | ERROR | `unbalanced-delimiters` | desbalance de `()`, `{}`, `[]` (reutiliza `SyntaxChecker`) |
 | WARNING | `function-too-long` | función con más de `editor.max_function_lines` líneas |
 | WARNING | `line-too-long` | línea con más de `editor.max_line_length` caracteres |
-| WARNING | `wildcard-import` | `from modulo import *` |
+| WARNING | `wildcard-import` | `from modulo import *` (también con un comentario al final) |
 | WARNING | `deep-nesting` | más de 4 niveles de indentación; un solo aviso por bloque |
 | INFO | `function-lines` | conteo de líneas de cada función |
 | INFO | `todo-comment` | comentarios con TODO o FIXME |
@@ -84,7 +85,10 @@ vuelve a recorrer por cada nivel, por eso el peor caso es O(p·C). Limitación c
 
 ### 3.3 Validaciones y Pila *(Luis)*
 La estructura `Stack` se implementó mediante nodos enlazados, garantizando un acceso estricto de tipo LIFO (Last-In, First-Out). Las operaciones `push`, `pop` y `peek` se realizan en tiempo O(1) ya que solo se manipula la referencia al tope de la pila (`_top`).
-`SyntaxChecker` utiliza la `Stack` para validar el balanceo de delimitadores `()`, `{}`, `[]`. Al iterar por cada caracter del código en O(n), los delimitadores de apertura se apilan con su línea y columna, y los de cierre se comparan con el tope, reportando desbalanceos exactos en O(n) de tiempo y O(n) de espacio en el peor caso. Ignora comentarios y strings.
+`SyntaxChecker` utiliza la `Stack` para validar el balanceo de delimitadores `()`, `{}`, `[]`. Al iterar por cada caracter del código en O(n), los delimitadores de apertura se apilan con su línea y columna, y los de cierre se comparan con el tope, reportando desbalanceos exactos en O(n) de tiempo y O(n) de espacio en el peor caso. Ignora comentarios y strings:
+- `"..."` y `'...'` terminan, a más tardar, al final de su línea (en Python no cruzan líneas salvo con `\` al final). Así una comilla sin cerrar no esconde los errores de las líneas siguientes.
+- `"""..."""` y `'''...'''` (docstrings) se reconocen explícitamente y pueden ocupar varias líneas.
+- Dentro de una cadena, `\` escapa el carácter siguiente; `#` fuera de una cadena inicia un comentario hasta el final de la línea.
 
 ### 3.4 Historial Undo/Redo (Patrón Memento) *(Luis)*
 La clase `History` gestiona el historial de edición de cada archivo utilizando el patrón Memento apoyándose en dos instancias de `Stack` independientes (`_undo` y `_redo`).
@@ -92,6 +96,9 @@ La clase `History` gestiona el historial de edición de cada archivo utilizando 
 - Al deshacer (`undo`), el estado pasa a `_redo` y se devuelve el tope de `_undo`. 
 - Al rehacer (`redo`), el flujo es inverso. 
 La complejidad temporal y espacial está directamente ligada al tamaño del texto guardado O(L).
+Como cada estado es una copia completa, la memoria crece O(k·L); por eso `editor.max_history`
+(100 por defecto, `0` = sin límite) acota k: tras cada `record`, `Stack.truncate` descarta los
+estados más antiguos del fondo de `_undo`.
 
 ### 3.5 Motor de Ordenamiento *(Luis)*
 Se implementó el patrón Strategy para los algoritmos de ordenamiento de los diagnósticos estáticos en `sorting.py`. Los resultados obtenidos con 4 diagnósticos introducidos intencionalmente arrojaron los siguientes tiempos en la consola:
