@@ -58,12 +58,13 @@ class RequestBuffer:
                                         daemon=True)
         self._worker.start()
 
-    def stop(self) -> None:
-        """Avisa al hilo, espera a que termine la petición en curso y hace join.
+    def stop(self, wait_seconds: float = 5.0) -> None:
+        """Avisa al hilo y espera como máximo wait_seconds a que termine.
 
         Las peticiones que seguían pendientes se descartan (quedan anotadas en el log):
         así 'exit' no espera a que la IA responda toda la cola. Si hay una petición en
-        curso, el join puede tardar hasta api.timeout_seconds.
+        curso no se espera hasta api.timeout_seconds: pasado wait_seconds se abandona
+        (el hilo es daemon, así que no impide cerrar el programa).
         """
         with self._condition:
             if not self._running:
@@ -71,12 +72,22 @@ class RequestBuffer:
             self._running = False
             discarded = len(self._pending)
             self._pending.clear()
+            in_progress = self._processing
             self._condition.notify_all()     # despierta al hilo si estaba esperando
         if discarded:
             self._logger.info(f"IA: cola detenida, {discarded} peticiones pendientes descartadas")
-        if self._worker is not None:
-            self._worker.join()
-            self._worker = None
+        if self._worker is None:
+            return
+        self._worker.join(wait_seconds)
+        if self._worker.is_alive():
+            self._logger.info(f"IA: solicitud #{in_progress.id if in_progress else '?'} "
+                              "abandonada al salir")
+        self._worker = None
+
+    def in_progress_id(self) -> Optional[int]:
+        """Id de la solicitud que se está enviando a la IA, o None. O(1)."""
+        with self._condition:
+            return self._processing.id if self._processing is not None else None
 
     def submit(self, file_name: str, code: str) -> int:
         """Encola bajo lock, notifica al hilo y devuelve el id de la solicitud. O(1).

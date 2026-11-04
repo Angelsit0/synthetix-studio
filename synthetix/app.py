@@ -16,6 +16,9 @@ from synthetix.files.backup_manager import BackupManager
 
 
 class Application:
+    # Al salir no se espera a la IA más que esto (su timeout puede ser de 120 s).
+    _STOP_WAIT_SECONDS = 5
+
     def run(self, argv: list) -> int:
         self._configure_output()
         ctx = AppContext()
@@ -45,7 +48,11 @@ class Application:
         finally:
             # Siempre: aunque la consola termine por Ctrl+C o un error inesperado,
             # se detiene el hilo de la IA y se respalda lo que quedó sin guardar.
-            ctx.requests.stop()
+            in_progress = ctx.requests.in_progress_id()
+            if in_progress is not None:
+                print(f"Esperando la respuesta en curso de la IA (#{in_progress}), "
+                      f"máximo {self._STOP_WAIT_SECONDS} s...")
+            ctx.requests.stop(self._STOP_WAIT_SECONDS)
             self._backup_on_exit(ctx)
             ctx.logger.info("Fin de sesión")
         return 0
