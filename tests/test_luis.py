@@ -112,6 +112,30 @@ class TestSyntaxCheckerPython(unittest.TestCase):
         self.assertTrue(SyntaxChecker().check("mid = (len(items) // 2)\n").ok)
         self.assertTrue(SyntaxChecker().check('s = "a\\"(b"\n').ok)
 
+    def test_cadena_sin_cerrar_no_esconde_errores_siguientes(self):
+        r = SyntaxChecker().check('x = "abc\ny = (1\n')
+        self.assertFalse(r.ok)
+        self.assertEqual((r.line, r.column), (2, 5))
+
+    def test_docstring_multilinea_ignora_delimitadores(self):
+        codigo = 'def f():\n    """Abre ( y\n    no cierra [ aquí\n    """\n    return (1)\n'
+        self.assertTrue(SyntaxChecker().check(codigo).ok)
+
+    def test_comillas_triples_simples_con_apostrofo(self):
+        codigo = "'''it's (\n'''\nx = [1, 2]\n"
+        self.assertTrue(SyntaxChecker().check(codigo).ok)
+
+    def test_error_despues_de_un_docstring(self):
+        r = SyntaxChecker().check('"""doc ("""\nx = 1)\n')
+        self.assertFalse(r.ok)
+        self.assertEqual((r.line, r.column), (2, 6))
+
+    def test_cadena_continuada_con_barra_invertida(self):
+        self.assertTrue(SyntaxChecker().check('s = "a (\\\nb"\nx = 1\n').ok)
+
+    def test_comilla_dentro_de_comentario(self):
+        self.assertTrue(SyntaxChecker().check("x = (1)  # it's\ny = [2]\n").ok)
+
 
 if __name__ == "__main__":
     unittest.main()
