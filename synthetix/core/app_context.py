@@ -18,3 +18,9 @@ class AppContext:
         self.ai = AIClient(self.config, self.http, self.logger)
         self.requests = RequestBuffer(self.ai, self.logger)
         self.running = True
+
+    def apply_config(self) -> None:
+        """Aplica a los receptores lo que depende de config.json. Se llama al iniciar y
+        cada vez que el comando config carga otro archivo."""
+        self.logger.init(self.config.log_dir)
+        self.files.set_max_history(self.config.get_int("editor.max_history", 100))

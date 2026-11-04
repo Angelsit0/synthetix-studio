@@ -16,6 +16,9 @@ from synthetix.files.backup_manager import BackupManager
 
 
 class Application:
+    # Al salir no se espera a la IA más que esto (su timeout puede ser de 120 s).
+    _STOP_WAIT_SECONDS = 5
+
     def run(self, argv: list) -> int:
         self._configure_output()
         ctx = AppContext()
@@ -28,7 +31,7 @@ class Application:
             print(f"[error] No se pudo leer la configuración '{config_path}': {e}")
             print("Uso: python main.py [ruta/config.json]")
             return 1
-        ctx.logger.init(ctx.config.log_dir)
+        ctx.apply_config()
         ctx.logger.info(f"Inicio de sesión con {config_path}")
         print(f"Configuración cargada: {config_path}")
 
@@ -38,10 +41,20 @@ class Application:
             module.register_into(registry)
 
         ctx.requests.start()
-        Console(registry, ctx).run()
-        ctx.requests.stop()
-        self._backup_on_exit(ctx)
-        ctx.logger.info("Fin de sesión")
+        try:
+            Console(registry, ctx).run()
+        except KeyboardInterrupt:
+            print("\nInterrumpido.")
+        finally:
+            # Siempre: aunque la consola termine por Ctrl+C o un error inesperado,
+            # se detiene el hilo de la IA y se respalda lo que quedó sin guardar.
+            in_progress = ctx.requests.in_progress_id()
+            if in_progress is not None:
+                print(f"Esperando la respuesta en curso de la IA (#{in_progress}), "
+                      f"máximo {self._STOP_WAIT_SECONDS} s...")
+            ctx.requests.stop(self._STOP_WAIT_SECONDS)
+            self._backup_on_exit(ctx)
+            ctx.logger.info("Fin de sesión")
         return 0
 
     @staticmethod

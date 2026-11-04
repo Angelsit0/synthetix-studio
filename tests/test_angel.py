@@ -2,14 +2,23 @@
 
     python -m unittest tests.test_angel -v
 """
+import contextlib
+import io
+import json
 import os
 import sys
+import tempfile
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from synthetix.analysis.diagnostic import Severity  # noqa: E402
 from synthetix.analysis.static_analyzer import StaticAnalyzer  # noqa: E402
+from synthetix.commands.core_commands import ConfigCommand  # noqa: E402
+from synthetix.commands.file_commands import LoadCommand  # noqa: E402
+from synthetix.config.config import Config, ConfigError  # noqa: E402
+from synthetix.core.app_context import AppContext  # noqa: E402
+from synthetix.core.command_args import CommandArgs  # noqa: E402
 from synthetix.ds.linked_list import LinkedList  # noqa: E402
 from synthetix.files.code_file import CodeFile  # noqa: E402
 from synthetix.files.file_manager import FileManager  # noqa: E402
@@ -200,6 +209,95 @@ class TestStaticAnalyzerReglas(unittest.TestCase):
                   "    return '" + "z" * 120 + "'\n")
         reglas = set(regla for _, regla in self._reglas(codigo, max_funcion=3))
         self.assertGreaterEqual(len(reglas), 5)
+
+    def test_import_todo_con_comentario(self):
+        reglas = self._reglas("from os import *  # se usa todo\n")
+        self.assertIn((1, "wildcard-import"), reglas)
+
+    def test_comentario_que_menciona_import_todo(self):
+        reglas = self._reglas("x = 1  # from os import *\n")
+        self.assertNotIn((1, "wildcard-import"), reglas)
+
+
+class TestCommandArgs(unittest.TestCase):
+    def test_rest_un_token_entre_comillas(self):
+        args = CommandArgs.parse('insert 3 "    x = (1 + 2)"')
+        self.assertEqual(args.rest(2), "    x = (1 + 2)")
+
+    def test_rest_varios_tokens_entre_comillas_no_se_mezclan(self):
+        self.assertEqual(CommandArgs.parse('new a "x" "y"').rest(2), '"x" "y"')
+
+    def test_rest_sin_comillas_respeta_espacios(self):
+        self.assertEqual(CommandArgs.parse("append  a   b ").rest(1), "a   b")
+
+    def test_rest_fuera_de_rango(self):
+        self.assertEqual(CommandArgs.parse("save").rest(1), "")
+
+
+class TestCodeFile(unittest.TestCase):
+    def test_edicion_por_lineas(self):
+        archivo = CodeFile(1, "a.py", "uno\ntres\n")
+        archivo.insert_line(2, "dos")
+        archivo.replace_line(3, "TRES")
+        archivo.append_line("cuatro")
+        archivo.remove_line(1)
+        self.assertEqual(archivo.lines(), ["dos", "TRES", "cuatro"])
+        self.assertTrue(archivo.modified)
+
+    def test_lineas_fuera_de_rango(self):
+        archivo = CodeFile(1, "a.py", "uno\n")
+        with self.assertRaises(IndexError):
+            archivo.replace_line(2, "x")
+        with self.assertRaises(IndexError):
+            archivo.remove_line(0)
+        with self.assertRaises(IndexError):
+            archivo.insert_line(3, "x")   # se puede insertar en 1..2
+        self.assertFalse(archivo.modified)
+
+    def test_limite_de_historial(self):
+        archivos = FileManager()
+        archivos.set_max_history(2)
+        archivo = archivos.create("a.py", "v0\n")
+        for version in range(1, 5):
+            archivo.apply_edit(f"v{version}\n")
+        self.assertEqual(archivo.history.undo_count, 2)
+        self.assertTrue(archivo.undo())
+        self.assertTrue(archivo.undo())
+        self.assertFalse(archivo.undo())
+        self.assertEqual(archivo.content, "v2\n")   # v0 y v1 se descartaron
+
+
+class TestRutasConEspacios(unittest.TestCase):
+    """El usuario de Windows puede tener espacios ('C:\\Users\\Angel Gabriel\\...')."""
+
+    def setUp(self):
+        self._carpeta = tempfile.TemporaryDirectory(prefix="con espacios ")
+        self.carpeta = self._carpeta.name
+        self.ruta = os.path.join(self.carpeta, "mi config.json")
+        with open(self.ruta, "w", encoding="utf-8") as f:
+            json.dump({"paths": {"logs": os.path.join(self.carpeta, "logs")},
+                       "editor": {"max_history": 7}}, f)
+
+    def tearDown(self):
+        self._carpeta.cleanup()
+
+    def test_comando_config_con_espacios_sin_comillas(self):
+        ctx = AppContext()
+        with contextlib.redirect_stdout(io.StringIO()):
+            ConfigCommand().execute(CommandArgs.parse("config " + self.ruta), ctx)
+        self.assertEqual(ctx.config.source_path, self.ruta)
+        self.assertEqual(ctx.files.max_history, 7)
+
+    def test_config_de_una_carpeta_da_mensaje_claro(self):
+        with self.assertRaises(ConfigError) as error:
+            Config().load_from_file(self.carpeta)
+        self.assertIn("es una carpeta", str(error.exception))
+
+    def test_load_de_una_carpeta_da_mensaje_claro(self):
+        ctx = AppContext()
+        with self.assertRaises(RuntimeError) as error:
+            LoadCommand().execute(CommandArgs.parse("load " + self.carpeta), ctx)
+        self.assertIn("es una carpeta", str(error.exception))
 
 
 if __name__ == "__main__":

@@ -20,11 +20,17 @@ class Config:
 
     def load_from_file(self, path: str) -> None:
         """Carga el archivo. Si falla, lanza ConfigError y conserva la configuración anterior."""
+        if os.path.isdir(path):     # Windows lo reporta como 'Permission denied': se aclara antes
+            raise ConfigError(f"'{path}' es una carpeta, no un archivo")
         try:
             with open(path, encoding="utf-8") as f:
                 data = json.load(f)
         except FileNotFoundError:
             raise ConfigError(f"no existe el archivo '{path}'") from None
+        except PermissionError:
+            raise ConfigError(f"sin permiso para leer '{path}'") from None
+        except UnicodeDecodeError:
+            raise ConfigError(f"'{path}' no es un archivo de texto UTF-8") from None
         except json.JSONDecodeError as e:
             raise ConfigError(f"JSON inválido en la línea {e.lineno}: {e.msg}") from None
         if not isinstance(data, dict):

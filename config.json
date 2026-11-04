@@ -18,6 +18,7 @@
   },
   "editor": {
     "max_line_length": 100,
-    "max_function_lines": 40
+    "max_function_lines": 40,
+    "max_history": 100
   }
 }
