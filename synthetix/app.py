@@ -38,10 +38,16 @@ class Application:
             module.register_into(registry)
 
         ctx.requests.start()
-        Console(registry, ctx).run()
-        ctx.requests.stop()
-        self._backup_on_exit(ctx)
-        ctx.logger.info("Fin de sesión")
+        try:
+            Console(registry, ctx).run()
+        except KeyboardInterrupt:
+            print("\nInterrumpido.")
+        finally:
+            # Siempre: aunque la consola termine por Ctrl+C o un error inesperado,
+            # se detiene el hilo de la IA y se respalda lo que quedó sin guardar.
+            ctx.requests.stop()
+            self._backup_on_exit(ctx)
+            ctx.logger.info("Fin de sesión")
         return 0
 
     @staticmethod
