@@ -7,6 +7,8 @@ from __future__ import annotations
 from synthetix.core.app_context import AppContext
 from synthetix.core.command_args import CommandArgs
 from synthetix.core.command_registry import CommandRegistry
+from synthetix.util import colors
+from synthetix.util.colors import paint
 
 
 class Console:
@@ -15,38 +17,7 @@ class Console:
         self._ctx = ctx
 
     def run(self) -> None:
-        import time
-        import sys
-        
-        frames = [
-            r"""
-    /\_/\  
-   ( -.- )  zZz...
-    > ^ <   
-""",
-            r"""
-    /\_/\  
-   ( o.o )  ?
-    > ^ <   
-""",
-            r"""
-    /\_/\  
-   ( ^.^ ) 🍌 Synthetix Studio
-    > ^ <     Mini IDE
-"""
-        ]
-        print("\n" * 3)
-        for i, frame in enumerate(frames):
-            lines = frame.strip('\n').split('\n')
-            if i > 0:
-                sys.stdout.write(f"\033[{len(lines)}A")
-            for line in lines:
-                sys.stdout.write(f"\033[38;5;213m{line}\033[K\033[0m\n")
-            sys.stdout.flush()
-            if i < len(frames) - 1:
-                time.sleep(0.5)
-                
-        print("\033[90m  Escribe 'help' para ver los comandos.\033[0m\n")
+        self._print_banner()
         while self._ctx.running:
             try:
                 line = input(self._prompt())
@@ -73,11 +44,21 @@ class Console:
         try:
             command.execute(args, self._ctx)
         except Exception as e:  # noqa: BLE001 - la consola no debe caerse nunca
-            print(f"\033[91m[error]\033[0m {e}")
+            print(f"{paint('[error]', colors.RED)} {e}")
             self._ctx.logger.error(f"{args.name}: {e}")
 
     def _prompt(self) -> str:
         active = self._ctx.files.active
         if active:
-            return f"\033[92msynthetix\033[0m(\033[96m{active.name}\033[0m)> "
-        return "\033[92msynthetix\033[0m> "
+            return f"{paint('synthetix', colors.GREEN)}({paint(active.name, colors.CYAN)})> "
+        return f"{paint('synthetix', colors.GREEN)}> "
+
+    @staticmethod
+    def _print_banner() -> None:
+        """Encabezado de bienvenida (sin pausas: no retrasa scripts ni la prueba de humo)."""
+        banner = ("  ╔══════════════════════════════╗\n"
+                  "  ║   S Y N T H E T I X          ║\n"
+                  "  ║   Studio · Mini IDE          ║\n"
+                  "  ╚══════════════════════════════╝")
+        print(paint(banner, colors.PINK))
+        print(paint("  Escribe 'help' para ver los comandos.", colors.GRAY) + "\n")

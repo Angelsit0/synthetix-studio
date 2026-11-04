@@ -16,6 +16,8 @@ from typing import Optional
 from synthetix.ai.ai_client import AIClient, AnalysisResult
 from synthetix.ds.fifo_queue import Queue
 from synthetix.ds.linked_list import LinkedList
+from synthetix.util import colors
+from synthetix.util.colors import paint
 from synthetix.util.logger import Logger
 
 
@@ -109,23 +111,26 @@ class RequestBuffer:
         """Texto para queue-status: en proceso, pendientes en orden FIFO y completadas sin ver.
         O(p + c), con p = pendientes y c = completadas."""
         with self._condition:
-            lines = ["\033[96mCola de peticiones a la IA (FIFO, un solo hilo despacha de una en una):\033[0m"]
+            lines = [paint("Cola de peticiones a la IA (FIFO, un solo hilo despacha de una "
+                           "en una):", colors.CYAN)]
             if self._processing is None:
-                lines.append("  En proceso: \033[90mninguna\033[0m")
+                lines.append("  En proceso: " + paint("ninguna", colors.GRAY))
             else:
-                lines.append(f"  En proceso: \033[93m{self._describe(self._processing)}\033[0m")
+                lines.append("  En proceso: " + paint(self._describe(self._processing),
+                                                      colors.YELLOW))
             if self._pending.is_empty():
-                lines.append("  Pendientes: \033[90mninguna\033[0m")
+                lines.append("  Pendientes: " + paint("ninguna", colors.GRAY))
             else:
-                lines.append(f"  Pendientes (\033[93m{len(self._pending)}\033[0m), en orden de salida:")
+                lines.append(f"  Pendientes ({paint(str(len(self._pending)), colors.YELLOW)}), "
+                             "en orden de salida:")
                 position = 1
                 for request in self._pending:
-                    lines.append(f"    {position}. \033[97m{self._describe(request)}\033[0m")
+                    lines.append(f"    {position}. {paint(self._describe(request), colors.WHITE)}")
                     position += 1
             unseen = self._count_unseen()
-            hint = "\033[90m  (usa 'results')\033[0m" if unseen else ""
-            color = "\033[92m" if unseen else "\033[90m"
-            lines.append(f"  Respuestas sin ver: {color}{unseen}\033[0m{hint}")
+            hint = paint("  (usa 'results')", colors.GRAY) if unseen else ""
+            count = paint(str(unseen), colors.GREEN if unseen else colors.GRAY)
+            lines.append(f"  Respuestas sin ver: {count}{hint}")
         return "\n".join(lines)
 
     def results_report(self) -> str:
@@ -195,12 +200,14 @@ class RequestBuffer:
     def _format_result(done: CompletedRequest) -> str:
         """Bloque de texto de una respuesta. Los errores se muestran como 'Error:' y no
         como '[error]', que es la marca de fallo de un comando en la consola."""
-        header = f"\033[96m=== Solicitud #{done.id}: {done.file_name} ===\033[0m"
+        header = paint(f"=== Solicitud #{done.id}: {done.file_name} ===", colors.CYAN)
         result = done.result
         if not result.ok:
-            return f"{header}\n\033[91mError: {result.error}\033[0m"
-        return (f"{header}\n\033[93mCOMPLEJIDAD:\033[0m\n{RequestBuffer._indent(result.complexity)}"
-                f"\n\033[92mREFACTORIZACION:\033[0m\n{RequestBuffer._indent(result.refactoring)}")
+            return f"{header}\n{paint('Error: ' + result.error, colors.RED)}"
+        return (f"{header}\n{paint('COMPLEJIDAD:', colors.YELLOW)}\n"
+                f"{RequestBuffer._indent(result.complexity)}\n"
+                f"{paint('REFACTORIZACION:', colors.GREEN)}\n"
+                f"{RequestBuffer._indent(result.refactoring)}")
 
     @staticmethod
     def _indent(text: str) -> str:
