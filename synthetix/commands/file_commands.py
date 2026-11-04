@@ -1,7 +1,4 @@
-"""Comandos del módulo 1: Archivos. DUEÑO: Angel Torres
-
-Estos comandos ya están conectados; lo que falta es LinkedList y FileManager.
-"""
+"""Comandos del módulo 1: Archivos. DUEÑO: Angel Torres"""
 from __future__ import annotations
 
 import os
@@ -180,6 +177,12 @@ class LoadCommand(Command):
                 content = f.read()
         except FileNotFoundError:
             raise RuntimeError(f"No se encontró el archivo '{path}' en el disco") from None
+        except IsADirectoryError:
+            raise RuntimeError(f"'{path}' es una carpeta, no un archivo") from None
+        except PermissionError:
+            raise RuntimeError(f"Sin permiso para leer '{path}'") from None
+        except UnicodeDecodeError:
+            raise RuntimeError(f"'{path}' no es un archivo de texto UTF-8") from None
         file = ctx.files.create(os.path.basename(path), content)
         print(f"Cargado [{file.id}] {file.name} ({file.line_count()} líneas)")
 
