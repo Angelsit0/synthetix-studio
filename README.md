@@ -19,6 +19,10 @@ Python 3.10 o superior. No usa librerías externas (no hace falta `pip install`)
 ```bash
 python main.py config.json
 ```
+En Windows, si `python` no se reconoce (abre la Microsoft Store o da "no se encontró Python"),
+use el lanzador `py`, que se instala junto con Python: `py main.py config.json`. Lo mismo vale
+para los scripts (`py scripts/verificar.py`).
+
 Al iniciar, el programa lee **obligatoriamente** el archivo de configuración (por defecto
 `config.json`). Si no puede leerlo, termina con un mensaje de error.
 
@@ -95,6 +99,10 @@ cada push y en cada Pull Request.
 | `api.api_key_env` | Nombre de la variable de entorno con la clave (la clave nunca va en el repo) |
 | `api.timeout_seconds` | Tiempo máximo por petición |
 | `editor.max_line_length`, `editor.max_function_lines` | Límites del análisis estático |
+| `editor.max_history` | Estados de `undo` que se guardan por archivo (los más antiguos se descartan; `0` = sin límite) |
+
+Los colores de la consola se desactivan solos al redirigir la salida a un archivo, o
+definiendo la variable de entorno `NO_COLOR`.
 
 Proveedores compatibles cambiando solo `base_url` y `model`: Groq, Gemini (endpoint
 OpenAI-compatible), OpenRouter, OpenAI. Verificar en la documentación del proveedor el nombre
@@ -109,7 +117,7 @@ vigente del modelo.
 | | `delete <id/nombre>` | Elimina un archivo y libera sus nodos |
 | | `config <ruta>` | Carga otro archivo de configuración |
 | | `show` | Muestra el código activo con números de línea |
-| | `write` | Reescribe el archivo activo (terminar con una línea `.`) |
+| | `write` | Reescribe el archivo activo (terminar con una línea `.`; Ctrl+C cancela sin cambiar nada) |
 | | `append <texto>` / `insert <n> <texto>` / `replace <n> <texto>` / `remove <n>` | Edición por líneas |
 | | `load <ruta>` / `save` | Abrir desde disco / guardar respaldo |
 | Validación e historial | `check` | Valida el balanceo de `()`, `{}`, `[]` e indica línea y carácter |
@@ -264,5 +272,4 @@ nodos, y MergeSort / ShellSort escritos a mano. `scripts/check_prohibidos.py` lo
 
 ## Flujo de trabajo
 Ramas `feature/<modulo>` → Pull Request a `main` con revisión de otro integrante.
-Commits con Conventional Commits (`feat(pila): ...`, `fix(cola): ...`). Detalle en
-[`docs/TAREAS.md`](docs/TAREAS.md).
+Commits con Conventional Commits (`feat(pila): ...`, `fix(cola): ...`).
