@@ -202,6 +202,14 @@ class TestStaticAnalyzerReglas(unittest.TestCase):
         reglas = set(regla for _, regla in self._reglas(codigo, max_funcion=3))
         self.assertGreaterEqual(len(reglas), 5)
 
+    def test_import_todo_con_comentario(self):
+        reglas = self._reglas("from os import *  # se usa todo\n")
+        self.assertIn((1, "wildcard-import"), reglas)
+
+    def test_comentario_que_menciona_import_todo(self):
+        reglas = self._reglas("x = 1  # from os import *\n")
+        self.assertNotIn((1, "wildcard-import"), reglas)
+
 
 class TestCommandArgs(unittest.TestCase):
     def test_rest_un_token_entre_comillas(self):
