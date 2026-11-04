@@ -105,6 +105,10 @@ class WriteCommand(Command):
                 line = input()
             except EOFError:
                 break
+            except KeyboardInterrupt:
+                # Ctrl+C cancela la escritura sin tocar el archivo ni cerrar el programa.
+                print("\nEscritura cancelada: el archivo no cambió.")
+                return
             if line.rstrip("\r") == ".":
                 break
             content += line.rstrip("\r") + "\n"
