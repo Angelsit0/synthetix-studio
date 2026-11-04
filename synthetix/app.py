@@ -31,7 +31,7 @@ class Application:
             print(f"[error] No se pudo leer la configuración '{config_path}': {e}")
             print("Uso: python main.py [ruta/config.json]")
             return 1
-        ctx.logger.init(ctx.config.log_dir)
+        ctx.apply_config()
         ctx.logger.info(f"Inicio de sesión con {config_path}")
         print(f"Configuración cargada: {config_path}")
 

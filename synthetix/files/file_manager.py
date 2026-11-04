@@ -12,6 +12,13 @@ class FileManager:
         self._files = LinkedList()
         self._active: Optional[CodeFile] = None
         self._next_id = 1
+        self.max_history = 0        # editor.max_history de config.json (0 = sin límite)
+
+    def set_max_history(self, max_history: int) -> None:
+        """Aplica el límite de Undo a los archivos nuevos y a los ya abiertos. O(n)."""
+        self.max_history = max(0, max_history)
+        for file in self._files:
+            file.history.max_states = self.max_history
 
     def create(self, name: str, content: str) -> CodeFile:
         """Crea el archivo, lo agrega al final de la lista y lo deja activo. O(n).
@@ -24,7 +31,7 @@ class FileManager:
             raise ValueError("El nombre del archivo no puede estar vacío")
         if self._files.index_of(lambda f: f.name == name) != -1:
             raise ValueError(f"Ya existe un archivo llamado '{name}'")
-        file = CodeFile(self._next_id, name, content)
+        file = CodeFile(self._next_id, name, content, self.max_history)
         self._files.push_back(file)
         self._next_id += 1
         self._active = file

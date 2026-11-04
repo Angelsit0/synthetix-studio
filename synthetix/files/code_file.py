@@ -9,12 +9,12 @@ from synthetix.validation.history import History
 
 
 class CodeFile:
-    def __init__(self, file_id: int, name: str, content: str) -> None:
+    def __init__(self, file_id: int, name: str, content: str, max_history: int = 0) -> None:
         self.id = file_id
         self.name = name
         self._content = content
         self.modified = False
-        self.history = History()
+        self.history = History(max_history)
 
     @property
     def content(self) -> str:
