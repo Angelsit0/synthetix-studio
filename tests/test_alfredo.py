@@ -203,6 +203,20 @@ class TestRequestBufferExtra(unittest.TestCase):
             ia.liberar.set()
             buffer.stop()
 
+    def test_stop_no_espera_toda_la_peticion_en_curso(self):
+        ia = _IABloqueada()
+        buffer = RequestBuffer(ia, Logger())
+        buffer.start()
+        try:
+            buffer.submit("lento.py", "x = 1")
+            self.assertTrue(ia.empezo.wait(5))
+            self.assertEqual(buffer.in_progress_id(), 1)
+            inicio = time.time()
+            buffer.stop(wait_seconds=0.2)
+            self.assertLess(time.time() - inicio, 2)
+        finally:
+            ia.liberar.set()
+
     def test_stop_no_se_cuelga(self):
         buffer = RequestBuffer(_IAFalsa(), Logger())
         buffer.start()
