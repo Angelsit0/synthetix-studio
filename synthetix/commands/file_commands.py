@@ -172,6 +172,8 @@ class LoadCommand(Command):
 
     def execute(self, args, ctx) -> None:
         path = args.rest(1)
+        if os.path.isdir(path):     # Windows lo reporta como 'Permission denied': se aclara antes
+            raise RuntimeError(f"'{path}' es una carpeta, no un archivo")
         try:
             with open(path, encoding="utf-8") as f:
                 content = f.read()
