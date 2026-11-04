@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from synthetix.analysis.diagnostic import Severity  # noqa: E402
 from synthetix.analysis.static_analyzer import StaticAnalyzer  # noqa: E402
+from synthetix.core.command_args import CommandArgs  # noqa: E402
 from synthetix.ds.linked_list import LinkedList  # noqa: E402
 from synthetix.files.code_file import CodeFile  # noqa: E402
 from synthetix.files.file_manager import FileManager  # noqa: E402
@@ -200,6 +201,21 @@ class TestStaticAnalyzerReglas(unittest.TestCase):
                   "    return '" + "z" * 120 + "'\n")
         reglas = set(regla for _, regla in self._reglas(codigo, max_funcion=3))
         self.assertGreaterEqual(len(reglas), 5)
+
+
+class TestCommandArgs(unittest.TestCase):
+    def test_rest_un_token_entre_comillas(self):
+        args = CommandArgs.parse('insert 3 "    x = (1 + 2)"')
+        self.assertEqual(args.rest(2), "    x = (1 + 2)")
+
+    def test_rest_varios_tokens_entre_comillas_no_se_mezclan(self):
+        self.assertEqual(CommandArgs.parse('new a "x" "y"').rest(2), '"x" "y"')
+
+    def test_rest_sin_comillas_respeta_espacios(self):
+        self.assertEqual(CommandArgs.parse("append  a   b ").rest(1), "a   b")
+
+    def test_rest_fuera_de_rango(self):
+        self.assertEqual(CommandArgs.parse("save").rest(1), "")
 
 
 if __name__ == "__main__":
