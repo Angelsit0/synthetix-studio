@@ -56,10 +56,12 @@ class CommandArgs:
 
     def rest(self, start_token: int) -> str:
         """Texto crudo desde el token indicado hasta el final (respeta espacios).
-        Si todo el resto está entre comillas, se las quita."""
+        Si el resto es UN solo token entre comillas, devuelve su contenido sin ellas
+        ('"x" "y"' son dos tokens: se devuelve tal cual)."""
         if start_token >= len(self._tokens):
             return ""
         text = self._raw[self._starts[start_token]:].rstrip()
-        if len(text) >= 2 and text[0] == '"' and text[-1] == '"':
-            text = text[1:-1]
+        is_last_token = start_token == len(self._tokens) - 1
+        if is_last_token and len(text) >= 2 and text[0] == '"' and text[-1] == '"':
+            return self._tokens[start_token]
         return text
